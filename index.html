@@ -7,17 +7,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0e0c0a;
-    --surface: #1a1714;
-    --surface2: #231f1b;
-    --border: #2e2925;
-    --gold: #c9a84c;
-    --gold2: #e8c96a;
-    --amber: #e07b39;
-    --text: #f0ead8;
-    --muted: #7a6f5e;
-    --success: #6aaa7a;
-    --danger: #c96a6a;
+    --bg: #f5f0e8;
+    --surface: #ffffff;
+    --surface2: #f0ebe0;
+    --border: #ddd5c4;
+    --gold: #9a6f1e;
+    --gold2: #7a5510;
+    --amber: #c45e1a;
+    --text: #2a2118;
+    --muted: #8a7a65;
+    --success: #2d7a40;
+    --danger: #b03030;
     --radius: 12px;
   }
 
@@ -28,14 +28,14 @@
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
     min-height: 100vh;
-    background-image: radial-gradient(ellipse at 20% 20%, rgba(201,168,76,0.04) 0%, transparent 60%),
-                      radial-gradient(ellipse at 80% 80%, rgba(224,123,57,0.04) 0%, transparent 60%);
+    background-image: radial-gradient(ellipse at 20% 20%, rgba(154,111,30,0.06) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 80%, rgba(196,94,26,0.06) 0%, transparent 60%);
   }
 
   /* NAV */
   nav {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(14,12,10,0.92);
+    background: rgba(245,240,232,0.95);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     padding: 0 2rem;
@@ -83,7 +83,7 @@
   .hero h1 {
     font-family: 'Playfair Display', serif;
     font-size: clamp(2.5rem, 6vw, 4rem);
-    background: linear-gradient(135deg, var(--gold2), var(--gold), var(--amber));
+    background: linear-gradient(135deg, var(--amber), var(--gold), var(--gold2));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     line-height: 1.1; margin-bottom: 0.75rem;
   }
@@ -141,8 +141,8 @@
     width: 28px; height: 28px; border-radius: 50%;
     font-weight: 700; font-size: 0.85rem;
   }
-  .rank-1 { background: linear-gradient(135deg, #c9a84c, #e8c96a); color: #0e0c0a; }
-  .rank-2 { background: linear-gradient(135deg, #8a8a8a, #b0b0b0); color: #0e0c0a; }
+  .rank-1 { background: linear-gradient(135deg, #9a6f1e, #c9a84c); color: #fff; }
+  .rank-2 { background: linear-gradient(135deg, #7a7a7a, #a0a0a0); color: #fff; }
   .rank-3 { background: linear-gradient(135deg, #a0673a, #c0804a); color: #fff; }
   .rank-other { background: var(--surface2); color: var(--muted); }
   .bar-wrap { display: flex; align-items: center; gap: 0.75rem; }
@@ -226,7 +226,7 @@
   .form-row { margin-bottom: 1rem; }
   label { display: block; color: var(--muted); font-size: 0.85rem; margin-bottom: 0.4rem; }
   input, textarea, select {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
     color: var(--text); padding: 0.65rem 0.85rem; border-radius: 8px;
     font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
     transition: border-color 0.2s;
@@ -266,7 +266,7 @@
 
   /* LOGIN MODAL */
   .modal-backdrop {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
     display: flex; align-items: center; justify-content: center;
     z-index: 1000; display: none;
   }
@@ -287,7 +287,7 @@
   .combo-input-row input { flex: 1; }
   .combo-dropdown {
     position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
-    background: var(--surface2); border: 1px solid var(--gold);
+    background: var(--surface); border: 1px solid var(--gold); box-shadow: 0 4px 16px rgba(0,0,0,0.12);
     border-radius: 8px; max-height: 220px; overflow-y: auto; display: none;
   }
   .combo-dropdown.open { display: block; }
@@ -1973,7 +1973,10 @@ function loadEditList() {
         <span style="font-weight:500">${dateStr}</span>
         <span style="color:var(--muted);font-size:0.85rem;margin-left:0.6rem">${ausgefallen ? '⚠ Ausgefallen' : '📍 ' + (t.ort||'-')}</span>
       </div>
-      <button class="att-btn" style="color:var(--gold);border-color:rgba(201,168,76,0.3)" onclick="openEditForm('${t.date}')">✏ Bearbeiten</button>
+      <div style="display:flex;gap:0.4rem">
+        <button class="att-btn" style="color:var(--gold);border-color:rgba(154,111,30,0.3)" onclick="openEditForm('${t.date}')">✏ Bearbeiten</button>
+        <button class="att-btn" style="color:var(--danger);border-color:rgba(176,48,48,0.3)" onclick="deleteFromAdmin('${t.date}')">🗑 Löschen</button>
+      </div>
     </div>`;
   }).join('');
 
@@ -2055,6 +2058,20 @@ function saveEditTreffen() {
 function closeEditForm() {
   document.getElementById('editForm').style.display = 'none';
   editingDate = null;
+}
+
+function deleteFromAdmin(date) {
+  if (!confirm('Treffen vom ' + new Date(date).toLocaleDateString('de-DE') + ' wirklich löschen?')) return;
+  appData.treffen = appData.treffen.filter(t => t.date !== date);
+  // Also remove from in-memory historical data
+  Object.values(historicalData).forEach(yr => {
+    yr.treffen = yr.treffen.filter(t => t.date !== date);
+  });
+  saveData();
+  deleteTreffenFromSupabase(date);
+  if (editingDate === date) closeEditForm();
+  loadEditList();
+  showMsg('Treffen gelöscht ✓', true);
 }
 
 // INIT
