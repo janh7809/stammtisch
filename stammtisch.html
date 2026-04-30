@@ -1,0 +1,1969 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stammtisch Statistik</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0c0a;
+    --surface: #1a1714;
+    --surface2: #231f1b;
+    --border: #2e2925;
+    --gold: #c9a84c;
+    --gold2: #e8c96a;
+    --amber: #e07b39;
+    --text: #f0ead8;
+    --muted: #7a6f5e;
+    --success: #6aaa7a;
+    --danger: #c96a6a;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    background-image: radial-gradient(ellipse at 20% 20%, rgba(201,168,76,0.04) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 80%, rgba(224,123,57,0.04) 0%, transparent 60%);
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(14,12,10,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .nav-brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+  }
+  .nav-brand span { color: var(--muted); font-size: 0.8rem; font-family: 'DM Sans', sans-serif; display: block; margin-top: -4px; }
+  .nav-links { display: flex; gap: 0.5rem; }
+  .nav-btn {
+    background: none; border: none; color: var(--muted);
+    padding: 0.5rem 1rem; border-radius: 8px;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover, .nav-btn.active { color: var(--gold); background: rgba(201,168,76,0.08); }
+  .nav-right { display: flex; align-items: center; gap: 1rem; }
+  #adminBadge {
+    background: rgba(201,168,76,0.15); border: 1px solid var(--gold);
+    color: var(--gold); padding: 0.25rem 0.75rem; border-radius: 20px;
+    font-size: 0.8rem; display: none;
+  }
+  #loginBtn {
+    background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.3);
+    color: var(--gold); padding: 0.5rem 1.1rem; border-radius: 8px;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  #loginBtn:hover { background: rgba(201,168,76,0.2); }
+
+  /* PAGES */
+  .page { display: none; padding: 2rem; max-width: 1200px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* HERO */
+  .hero {
+    text-align: center; padding: 3rem 0 2rem;
+    border-bottom: 1px solid var(--border); margin-bottom: 2.5rem;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    background: linear-gradient(135deg, var(--gold2), var(--gold), var(--amber));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    line-height: 1.1; margin-bottom: 0.75rem;
+  }
+  .hero p { color: var(--muted); font-size: 1rem; }
+
+  /* YEAR SELECTOR */
+  .year-tabs {
+    display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap;
+  }
+  .year-tab {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); padding: 0.5rem 1.25rem; border-radius: 8px;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .year-tab:hover, .year-tab.active {
+    background: rgba(201,168,76,0.1); border-color: var(--gold); color: var(--gold);
+  }
+
+  /* STATS GRID */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: rgba(201,168,76,0.3); }
+  .stat-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+  .stat-value { font-size: 1.8rem; font-weight: 600; color: var(--gold2); }
+  .stat-sub { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+
+  /* RANKING TABLE */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem; color: var(--gold);
+    margin-bottom: 1.25rem; padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .ranking-table { width: 100%; border-collapse: collapse; margin-bottom: 2.5rem; }
+  .ranking-table th {
+    text-align: left; padding: 0.75rem 1rem;
+    color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border); font-weight: 500;
+  }
+  .ranking-table td {
+    padding: 0.9rem 1rem; border-bottom: 1px solid rgba(46,41,37,0.5);
+    font-size: 0.95rem;
+  }
+  .ranking-table tr:hover td { background: rgba(201,168,76,0.03); }
+  .rank-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    font-weight: 700; font-size: 0.85rem;
+  }
+  .rank-1 { background: linear-gradient(135deg, #c9a84c, #e8c96a); color: #0e0c0a; }
+  .rank-2 { background: linear-gradient(135deg, #8a8a8a, #b0b0b0); color: #0e0c0a; }
+  .rank-3 { background: linear-gradient(135deg, #a0673a, #c0804a); color: #fff; }
+  .rank-other { background: var(--surface2); color: var(--muted); }
+  .bar-wrap { display: flex; align-items: center; gap: 0.75rem; }
+  .bar-bg { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--gold), var(--amber)); transition: width 0.8s ease; }
+  .pct-text { min-width: 45px; text-align: right; color: var(--gold2); font-weight: 500; }
+
+  /* TREFFEN LIST */
+  .treffen-filters { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .filter-select {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); padding: 0.5rem 1rem; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer;
+  }
+  .treffen-list { display: flex; flex-direction: column; gap: 1rem; }
+  .treffen-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .treffen-card:hover { border-color: rgba(201,168,76,0.3); background: var(--surface2); }
+  .treffen-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+  .treffen-date { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--gold); }
+  .treffen-ort { color: var(--muted); font-size: 0.9rem; margin-top: 0.1rem; }
+  .treffen-score { text-align: right; }
+  .treffen-score .num { font-size: 1.4rem; font-weight: 600; color: var(--gold2); }
+  .treffen-score .label { font-size: 0.75rem; color: var(--muted); }
+  .attendance-dots { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .dot {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.25rem 0.6rem; border-radius: 20px;
+    font-size: 0.8rem;
+  }
+  .dot.present { background: rgba(106,170,122,0.15); color: var(--success); border: 1px solid rgba(106,170,122,0.2); }
+  .dot.half { background: rgba(201,168,76,0.1); color: var(--gold); border: 1px solid rgba(201,168,76,0.2); }
+  .dot.absent { background: rgba(201,99,99,0.1); color: var(--danger); border: 1px solid rgba(201,99,99,0.15); }
+  .treffen-detail { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); display: none; }
+  .treffen-detail.open { display: block; }
+  .detail-row { margin-bottom: 0.5rem; font-size: 0.9rem; }
+  .detail-row strong { color: var(--gold); }
+  .detail-row p { color: var(--muted); margin-top: 0.2rem; line-height: 1.5; }
+  .ausgefallen-banner {
+    background: rgba(201,99,99,0.1); border: 1px solid rgba(201,99,99,0.2);
+    color: var(--danger); padding: 0.4rem 0.75rem; border-radius: 6px;
+    font-size: 0.8rem; display: inline-block; margin-bottom: 0.75rem;
+  }
+
+  /* OVERALL */
+  .overall-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+  @media (max-width: 700px) { .overall-grid { grid-template-columns: 1fr; } }
+  .year-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem;
+  }
+  .year-card h3 { font-family: 'Playfair Display', serif; color: var(--gold); margin-bottom: 1rem; }
+  .podium-item { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
+  .podium-item .name { flex: 1; }
+  .podium-item .pts { color: var(--gold2); font-weight: 500; min-width: 40px; text-align: right; }
+
+  /* STATUTEN */
+  .statuten-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 2rem; margin-bottom: 1.5rem;
+  }
+  .statuten-card h3 { font-family: 'Playfair Display', serif; color: var(--gold); margin-bottom: 0.5rem; font-size: 1rem; }
+  .statut-list { list-style: none; }
+  .statut-list li {
+    padding: 0.75rem 0; border-bottom: 1px solid var(--border);
+    display: flex; gap: 1rem; font-size: 0.95rem; line-height: 1.5;
+  }
+  .statut-list li:last-child { border-bottom: none; }
+  .statut-num { color: var(--gold); font-weight: 700; min-width: 24px; }
+
+  /* ADMIN */
+  .admin-section { max-width: 700px; }
+  .admin-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem;
+  }
+  .admin-card h3 { font-family: 'Playfair Display', serif; color: var(--gold); margin-bottom: 1.25rem; }
+  .form-row { margin-bottom: 1rem; }
+  label { display: block; color: var(--muted); font-size: 0.85rem; margin-bottom: 0.4rem; }
+  input, textarea, select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 0.65rem 0.85rem; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--gold); }
+  textarea { resize: vertical; min-height: 80px; }
+  .attendance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
+  .member-row {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.75rem; display: flex; align-items: center; justify-content: space-between;
+  }
+  .member-row .mname { font-weight: 500; }
+  .attendance-btns { display: flex; gap: 0.4rem; }
+  .att-btn {
+    padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--border);
+    background: none; color: var(--muted); cursor: pointer; font-size: 0.8rem;
+    transition: all 0.15s;
+  }
+  .att-btn.selected-1 { background: rgba(106,170,122,0.2); border-color: var(--success); color: var(--success); }
+  .att-btn.selected-05 { background: rgba(201,168,76,0.15); border-color: var(--gold); color: var(--gold); }
+  .att-btn.selected-0 { background: rgba(201,99,99,0.15); border-color: var(--danger); color: var(--danger); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold), var(--amber));
+    color: #0e0c0a; border: none; padding: 0.75rem 2rem; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-danger {
+    background: rgba(201,99,99,0.1); color: var(--danger); border: 1px solid rgba(201,99,99,0.3);
+    padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+  }
+  .alert { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
+  .alert-success { background: rgba(106,170,122,0.15); color: var(--success); border: 1px solid rgba(106,170,122,0.2); }
+  .alert-error { background: rgba(201,99,99,0.15); color: var(--danger); border: 1px solid rgba(201,99,99,0.2); }
+
+  /* LOGIN MODAL */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; display: none;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 380px;
+  }
+  .modal h2 { font-family: 'Playfair Display', serif; color: var(--gold); margin-bottom: 1.5rem; font-size: 1.5rem; }
+  .modal-btns { display: flex; gap: 0.75rem; margin-top: 1rem; }
+  .btn-ghost {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 0.65rem 1.5rem; border-radius: 8px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+  }
+  .combo-wrap { position: relative; }
+  .combo-input-row { display: flex; gap: 0.5rem; align-items: center; }
+  .combo-input-row input { flex: 1; }
+  .combo-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
+    background: var(--surface2); border: 1px solid var(--gold);
+    border-radius: 8px; max-height: 220px; overflow-y: auto; display: none;
+  }
+  .combo-dropdown.open { display: block; }
+  .combo-option {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.55rem 0.85rem; cursor: pointer; font-size: 0.9rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .combo-option:last-child { border-bottom: none; }
+  .combo-option:hover { background: rgba(201,168,76,0.08); }
+  .combo-option .del-opt {
+    background: none; border: none; color: var(--danger); cursor: pointer;
+    font-size: 0.8rem; padding: 0.1rem 0.3rem; border-radius: 4px; opacity: 0.6;
+  }
+  .combo-option .del-opt:hover { opacity: 1; }
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; min-height: 28px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.25);
+    color: var(--gold2); padding: 0.2rem 0.55rem; border-radius: 20px; font-size: 0.82rem;
+  }
+  .tag button { background: none; border: none; color: var(--gold); cursor: pointer; font-size: 0.85rem; line-height:1; padding:0; }
+  .absence-reason {
+    display: none; margin-top: 0.5rem; padding: 0.6rem 0.75rem;
+    background: rgba(201,99,99,0.06); border: 1px solid rgba(201,99,99,0.15);
+    border-radius: 8px; flex-direction: column; gap: 0.5rem;
+  }
+  .absence-reason.open { display: flex; }
+  .reason-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .reason-btn {
+    padding: 0.3rem 0.7rem; border-radius: 6px; border: 1px solid var(--border);
+    background: none; color: var(--muted); cursor: pointer; font-size: 0.8rem;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .reason-btn.sel-excused    { background: rgba(106,170,122,0.15); border-color: var(--success); color: var(--success); }
+  .reason-btn.sel-excused-no { background: rgba(201,168,76,0.12);  border-color: var(--gold);    color: var(--gold);    }
+  .reason-btn.sel-unexcused  { background: rgba(201,99,99,0.15);   border-color: var(--danger);  color: var(--danger);  }
+  .reason-input { display: none; }
+  .reason-input.open { display: block; }
+  .excused-detail { font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; padding-left: 0.5rem; border-left: 2px solid var(--border); }
+  .statuten-collapse { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 0; }
+  .statuten-collapse summary { padding: 1rem 1.25rem; cursor: pointer; color: var(--gold); font-weight: 500; list-style: none; display: flex; align-items: center; gap: 0.5rem; }
+  .statuten-collapse summary::-webkit-details-marker { display: none; }
+  .statuten-collapse[open] summary { border-bottom: 1px solid var(--border); }
+  .statuten-collapse .statut-list { padding: 0.25rem 1.25rem 0.75rem; }
+  .extra-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .extra-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
+  .extra-card .ec-title { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+  .extra-card .ec-winner { font-size: 1.05rem; font-weight: 600; color: var(--gold2); margin-bottom: 0.25rem; }
+  .extra-card .ec-sub { font-size: 0.85rem; color: var(--muted); }
+  .all-attend-list { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .all-attend-item { font-size: 0.82rem; color: var(--muted); padding: 0.2rem 0.5rem; background: rgba(201,168,76,0.06); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">🍺 Stammtisch<span>Statistik & Archiv</span></div>
+  <div class="nav-links">
+    <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showPage('treffen')">Treffen</button>
+    <button class="nav-btn" onclick="showPage('overall')">Overall</button>
+    <button class="nav-btn" id="adminNavBtn" onclick="showPage('admin')" style="display:none">Admin</button>
+  </div>
+  <div class="nav-right">
+    <span id="adminBadge">👑 Admin</span>
+    <button id="loginBtn" onclick="openLogin()">Anmelden</button>
+  </div>
+</nav>
+
+<!-- LOGIN MODAL -->
+<div class="modal-backdrop" id="loginModal">
+  <div class="modal">
+    <h2>Admin Login</h2>
+    <div class="form-row">
+      <label>Passwort</label>
+      <input type="password" id="pwInput" placeholder="Passwort eingeben..." onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div id="loginError" class="alert alert-error" style="display:none">Falsches Passwort.</div>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="doLogin()">Einloggen</button>
+      <button class="btn-ghost" onclick="closeLogin()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD PAGE -->
+<div class="page active" id="page-dashboard">
+  <div class="hero">
+    <h1>Stammtisch Statistik</h1>
+    <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
+  </div>
+  <details class="statuten-collapse">
+    <summary>📜 Statuten des Stammtischs</summary>
+    <div id="dashStatutenContent"></div>
+  </details>
+  <div class="year-tabs" id="dashYearTabs" style="margin-top:1.5rem"></div>
+  <div class="stats-grid" id="statsGrid"></div>
+  <h2 class="section-title">🏆 Rangliste</h2>
+  <table class="ranking-table" id="rankingTable"></table>
+  <div id="extraStats"></div>
+</div>
+
+<!-- TREFFEN PAGE -->
+<div class="page" id="page-treffen">
+  <div class="hero" style="padding:2rem 0 1.5rem">
+    <h1 style="font-size:2rem">Alle Treffen</h1>
+  </div>
+  <div class="treffen-filters">
+    <div class="year-tabs" id="treffenYearTabs" style="margin-bottom:0"></div>
+  </div>
+  <div class="treffen-list" id="treffenList"></div>
+</div>
+
+<!-- OVERALL PAGE -->
+<div class="page" id="page-overall">
+  <div class="hero" style="padding:2rem 0 1.5rem">
+    <h1 style="font-size:2rem">Overall Statistik</h1>
+    <p>Alle Jahre im Überblick</p>
+  </div>
+  <div id="overallContent"></div>
+</div>
+
+<!-- STATUTEN PAGE -->
+<div class="page" id="page-statuten">
+  <div class="hero" style="padding:2rem 0 1.5rem">
+    <h1 style="font-size:2rem">Statuten</h1>
+    <p>Die aktuell gültigen Regeln des Stammtischs</p>
+  </div>
+  <div id="statutenContent"></div>
+</div>
+
+<!-- ADMIN PAGE -->
+<div class="page" id="page-admin">
+  <div class="hero" style="padding:2rem 0 1.5rem">
+    <h1 style="font-size:2rem">Admin-Bereich</h1>
+    <p>Nur für den Stammtisch-Verwalter</p>
+  </div>
+  <div class="admin-section">
+    <div id="adminMsg"></div>
+    <div class="admin-card">
+      <h3>Neues Treffen eintragen</h3>
+      <div class="form-row">
+        <label>Datum</label>
+        <input type="date" id="newDate">
+      </div>
+      <div class="form-row">
+        <label>Ort</label>
+        <div class="combo-wrap" id="ortComboWrap">
+          <div class="combo-input-row">
+            <input type="text" id="newOrt" placeholder="Ort eingeben oder auswählen..." autocomplete="off"
+              oninput="filterCombo('ort')" onfocus="openCombo('ort')" onkeydown="comboKey(event,'ort')">
+          </div>
+          <div class="combo-dropdown" id="ortDropdown"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Anwesende Gäste</label>
+        <div class="combo-wrap" id="guestComboWrap">
+          <div class="combo-input-row">
+            <input type="text" id="guestInput" placeholder="Gast eingeben oder auswählen..."
+              autocomplete="off" oninput="filterCombo('guest')" onfocus="openCombo('guest')" onkeydown="comboKey(event,'guest')">
+          </div>
+          <div class="combo-dropdown" id="guestDropdown"></div>
+          <div class="tags-wrap" id="guestTags"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Anwesenheit der Mitglieder</label>
+        <div class="attendance-grid" id="attendanceGrid"></div>
+      </div>
+      <div class="form-row">
+        <label>Bemerkungen</label>
+        <textarea id="newBemerkung" placeholder="Besondere Vorkommnisse..."></textarea>
+      </div>
+      <textarea id="newExcuse" style="display:none"></textarea>
+      <button class="btn-primary" onclick="saveTreffen()">Treffen speichern</button>
+    </div>
+    <div class="admin-card">
+      <h3>Vergangene Treffen bearbeiten</h3>
+      <div class="form-row">
+        <label>Jahr auswählen</label>
+        <select id="editYear" onchange="loadEditList()">
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+        </select>
+      </div>
+      <div id="editTreffenList" style="margin-bottom:1rem"></div>
+      <div id="editForm" style="display:none">
+        <div style="height:1px;background:var(--border);margin:1rem 0"></div>
+        <div style="font-family:'Playfair Display',serif;color:var(--gold);margin-bottom:1rem" id="editFormTitle"></div>
+        <div class="form-row">
+          <label>Ort</label>
+          <div class="combo-wrap" id="editOrtComboWrap">
+            <div class="combo-input-row">
+              <input type="text" id="editOrt" placeholder="Ort eingeben oder auswählen..." autocomplete="off"
+                oninput="filterCombo('editOrt')" onfocus="openCombo('editOrt')" onkeydown="comboKey(event,'editOrt')">
+            </div>
+            <div class="combo-dropdown" id="editOrtDropdown"></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Anwesende Gäste</label>
+          <div class="combo-wrap" id="editGuestComboWrap">
+            <div class="combo-input-row">
+              <input type="text" id="editGuestInput" placeholder="Gast eingeben oder auswählen..." autocomplete="off"
+                oninput="filterCombo('editGuest')" onfocus="openCombo('editGuest')" onkeydown="comboKey(event,'editGuest')">
+            </div>
+            <div class="combo-dropdown" id="editGuestDropdown"></div>
+            <div class="tags-wrap" id="editGuestTags"></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Anwesenheit</label>
+          <div class="attendance-grid" id="editAttGrid"></div>
+        </div>
+        <div class="form-row"><label>Entschuldigungen & Begründungen</label><textarea id="editExcuse"></textarea></div>
+        <div class="form-row"><label>Bemerkungen</label><textarea id="editBemerkung"></textarea></div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <button class="btn-primary" onclick="saveEditTreffen()">Änderungen speichern</button>
+          <button class="btn-ghost" onclick="closeEditForm()">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+    <div class="admin-card">
+      <h3>Mitglieder verwalten</h3>
+      <div id="memberList"></div>
+      <div style="display:flex;gap:0.75rem;margin-top:1rem">
+        <input type="text" id="newMemberName" placeholder="Neuer Name..." style="flex:1">
+        <button class="btn-primary" onclick="addMember()" style="padding:0.65rem 1.25rem">Hinzufügen</button>
+      </div>
+    </div>
+    <div class="admin-card">
+      <h3>Locations &amp; Gäste verwalten</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+
+        <!-- LOCATIONS -->
+        <div>
+          <div style="font-weight:600;color:var(--text);margin-bottom:0.75rem;font-size:0.95rem">📍 Locations</div>
+          <div id="manageLocList"></div>
+          <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
+            <input type="text" id="newLocInput" placeholder="Neue Location..." style="flex:1;font-size:0.85rem">
+            <button class="btn-primary" onclick="addNewLoc()" style="padding:0.55rem 0.9rem;font-size:0.85rem">+</button>
+          </div>
+        </div>
+
+        <!-- GUESTS -->
+        <div>
+          <div style="font-weight:600;color:var(--text);margin-bottom:0.75rem;font-size:0.95rem">👥 Gäste</div>
+          <div id="manageGuestList"></div>
+          <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
+            <input type="text" id="newGuestManageInput" placeholder="Neuer Gast..." style="flex:1;font-size:0.85rem">
+            <button class="btn-primary" onclick="addNewGuest()" style="padding:0.55rem 0.9rem;font-size:0.85rem">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RENAME MODAL inline -->
+      <div id="renamePanel" style="display:none;margin-top:1rem;padding:1rem;background:var(--surface2);border:1px solid var(--gold);border-radius:10px">
+        <div style="font-weight:600;color:var(--gold);margin-bottom:0.75rem" id="renamePanelTitle">Umbenennen</div>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+          <span style="color:var(--muted);font-size:0.85rem">Von:</span>
+          <span id="renameOldVal" style="color:var(--text);font-weight:500"></span>
+          <span style="color:var(--muted);font-size:0.85rem;margin-left:0.5rem">Nach:</span>
+          <input type="text" id="renameNewVal" style="flex:1;min-width:140px;font-size:0.9rem" placeholder="Neuer Name...">
+          <button class="btn-primary" onclick="doRename()" style="padding:0.55rem 1rem;font-size:0.85rem">Umbenennen</button>
+          <button class="btn-ghost" onclick="closeRenamePanel()" style="padding:0.55rem 0.75rem;font-size:0.85rem">✕</button>
+        </div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem">⚠ Wird rückwirkend in allen Treffen angepasst</div>
+      </div>
+    </div>
+
+    <div class="admin-card">
+      <h3>Statuten bearbeiten</h3>
+      <div id="statutenAdmin"></div>
+      <div style="display:flex;gap:0.75rem;margin-top:1rem">
+        <input type="text" id="newStatut" placeholder="Neue Statut hinzufügen..." style="flex:1">
+        <button class="btn-primary" onclick="addStatut()" style="padding:0.65rem 1.25rem">+</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const ADMIN_PW = "stammtisch2023";
+
+// Members per year (can be modified by admin via localStorage)
+let appData = JSON.parse(localStorage.getItem('stammtisch_data') || 'null') || {
+  members: ["Christoph","Patrick","Fabian","André","Jan","Oliver"],
+  statuten: [
+    "Beschlussfähigkeit: Es benötigt eine 2/3 Mehrheit um eine der nachfolgenden Statuten zu ändern, zu entfernen oder neue Statuten aufzunehmen.",
+    "Entschuldigung und Begründung: Die offiziellen Teilnehmer müssen sich proaktiv abmelden, ansonsten wird davon ausgegangen, dass teilgenommen wird. Mit der Abmeldung muss eine Begründung erfolgen! Diese muss vor Beginn des Stammtischs vorliegen, d.h. vor 20:00 Uhr, im Bau-Chat.",
+    "Frage nach dem Stammtisch: Im Bau-Chat ist nur die Frage \"Wo?\" erlaubt.",
+    "Teilnahmedauer: Der Stammtisch beginnt um 20:00 Uhr. Ein Erscheinen nach 21:30 Uhr führt dazu, dass die Teilnahme mit nur 0,5 bewertet wird. Es müssen mind. 60 Minuten am Stammtisch teilgenommen werden.",
+    "Mindestteilnehmer: Es müssen mind. zwei Personen am Stammtisch teilnehmen, ansonsten werden alle Teilnehmer mit 0 bewertet und der Stammtisch ist somit ausgefallen.",
+    "Ort und Zeit: Der Stammtisch findet immer Donnerstags um 20:00 Uhr statt, außer es einigen sich 50% der offiziellen Teilnehmer darauf, den Stammtisch auf einen anderen Wochentag oder eine andere Uhrzeit zu verlegen."
+  ],
+  treffen: []
+};
+
+// Pre-load historical data from Excel files
+const historicalData = {
+  2023: {
+    maxPossible: 50,
+    members: ["Christoph","Patrick","Fabian","André","Jan","Oliver"],
+    totals: {Christoph:39, Patrick:28.5, Fabian:40, André:36, Jan:31, Oliver:10},
+    unexcused: {"2023-04-27":["Oliver"],"2023-07-06":["André","Jan"],"2023-07-20":["Oliver"]},
+    excused_no_reason: {"Christoph":0,"Patrick":6,"Fabian":1,"André":0,"Jan":1,"Oliver":6},
+    treffen: [
+      {date:"2023-01-05",ort:"Dannemann",guests:"Alexander",attendance:{Christoph:1,Patrick:0,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"André: Urlaub · Patrick: Skifahren · Oliver: Geburtstag",note:"Jan hatte am Tag vorher Geburtstag und hat die Gelegenheit als kleines Beisammensein genutzt"},
+      {date:"2023-01-12",ort:"Anker",guests:"Tobias, Giuseppe, Vito",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Am Sack",note:"Mehrheitlicher Beschluss zur Führung einer Statistik"},
+      {date:"2023-01-19",ort:"Fabian",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: krank",note:"Fabian musste auf seine Kinder aufpassen"},
+      {date:"2023-01-26",ort:"Anker und Teddy Bär",guests:"Alexander",attendance:{Christoph:1,Patrick:0,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"André: Urlaub · Patrick: Skifahren · Oliver: Geburtstag",note:"Jan hatte am Tag vorher Geburtstag und hat die Gelegenheit als kleines Besammensein genutzt"},
+      {date:"2023-02-02",ort:"André",guests:"Tobias, Giuseppe, Vito",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Am Sack",note:"Mehrheitlicher Beschluss zur Führung einer Statistik"},
+      {date:"2023-02-09",ort:"Fabian",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: krank",note:"Fabian musste auf seine Kinder aufpassen"},
+      {date:"2023-02-16",ort:"Christoph",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: Skifahren · Oliver: krank",note:"Andrés plötzliche Blitzgenesung"},
+      {date:"2023-02-23",ort:"Anker",guests:"Dominik",attendance:{Christoph:1,Patrick:1,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Fabian: Probeessen · Oliver: Nachtschicht",note:"Bei André, da Entkalkungsanlage eingebaut wurde"},
+      {date:"2023-03-02",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:0,Jan:0,Oliver:0},excuse:"Jan: Bronchitis · Patrick: Schwiegermutter Geburtstag · Christoph: Cousin Geburtstag · Oliver: Nachtschicht · André: Viel Arbeit",note:"Fabian der einzige Teilnehmer, hat alleine bei sich zu Hause durchgeführt"},
+      {date:"2023-03-09",ort:"Anker und Alte Post",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:0,André:0,Jan:1,Oliver:0},excuse:"Oliver: Kindkrank · Fabian: Kinder · André: braucht Abstand",note:"Jan konnte nur sehr kurz teilnehmen"},
+      {date:"2023-03-16",ort:"Anker und Alte Post",guests:"Simon",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:"Simon und Patrick haben gleichzeitig teilgenommen"},
+      {date:"2023-03-23",ort:"Castell",guests:"Giuseppe, Tobias",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Oliver: Krank · Fabian: Geschäftsklausur · Patrick: ohne Begründung",note:"Aggro blonde Kellnerin ist richtig sauer"},
+      {date:"2023-03-30",ort:"Anker und Alte Post",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"Christoph: Tina nicht da · Patrick: nicht entschuldigt",note:"Anker kassiert konsequent um 22:00 Uhr ab"},
+      {date:"2023-04-06",ort:"Christoph",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:"Jan verspätet sich 45 Min, Christoph 1,5 Stunden wegen Hasen"},
+      {date:"2023-04-13",ort:"Christoph",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Fabian: Corona · Patrick: war mit Fabian · Oliver: nicht gut · Christoph: Düsseldorf",note:""},
+      {date:"2023-04-20",ort:"Christoph",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:"Kleine Anker-Bedienung behauptet Pommes in Waldhausen zu übernehmen"},
+      {date:"2023-04-27",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:"Haddai schmeißt alle konsequent um 1:30 Uhr raus"},
+      {date:"2023-05-04",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Nachtschicht",note:"Annalena Baerbock wird zur schönsten Frau der Welt gewählt"},
+      {date:"2023-05-11",ort:"Christoph",guests:"Dominik",attendance:{Christoph:1,Patrick:1,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"Oliver: Nachtschicht · André: Berenice hat Geburtstag",note:""},
+      {date:"2023-05-18",ort:"Bilzhütte und Skihütte Oberkochen",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: ohne Begründung",note:""},
+      {date:"2023-05-25",ort:"André",guests:"Klaas",attendance:{Christoph:1,Patrick:1,Fabian:1,André:0,Jan:0,Oliver:0},excuse:"André: Urlaub · Oliver: Spätschicht · Jan: Vorstellungsgespräch",note:"Anker Alte hat pünktlich Schluss wegen Auto putzen"},
+      {date:"2023-06-01",ort:"Anker",guests:"Dominik, Timo",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:"Haddai ging das Bier aus, Schuld auf Jan geschoben"},
+      {date:"2023-06-18",ort:"Bilzhütte und Skihütte Oberkochen",guests:"Alexander",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Haddai: Urlaub · Jan: Urlaub · Patrick: ohne Begründung",note:"Stammtisch mit Vatertagsausflug verbunden"},
+      {date:"2023-06-29",ort:"Fabian",guests:"Dominik, Sascha, Frank, Alexander",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Geburtstag",note:"Franky war auf Heimatbesuch"},
+      {date:"2023-07-06",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Angeln · Patrick: sitze noch",note:""},
+      {date:"2023-07-13",ort:"Anker",guests:"Giuseppe, Tobias, Dominik, Alexander",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: 4 Hefe im Schädel",note:"Beschluss: Erscheinen nach 21:30 Uhr = 0,5 Punkte"},
+      {date:"2023-07-20",ort:"Anker",guests:"Giuseppe",attendance:{Christoph:1,Patrick:1,Fabian:1,André:0,Jan:1,Oliver:1},excuse:"André: Geburtstag Gongibärle",note:"André schreibt um 23:46 Uhr dass er noch kommen würde"},
+      {date:"2023-07-27",ort:"Anker",guests:"Dominik",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht · Patrick: Südtirol · Fabian: Urlaub",note:""},
+      {date:"2023-08-03",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:0,Jan:0,Oliver:1},excuse:"Christoph: Rückweg Italien · Jan: Urlaub · Patrick: nicht entschuldigt · André: nicht entschuldigt",note:"Entschuldigung André um 20:59 Uhr, zu spät"},
+      {date:"2023-08-10",ort:"Anker",guests:"Klaas",attendance:{Christoph:1,Patrick:0.5,Fabian:1,André:0,Jan:0,Oliver:0},excuse:"Oliver: Geburtstag · Jan: nicht entschuldigt · André: nicht entschuldigt",note:"Patrick bekommt nur 0,5 weil nach 21:30 Uhr"},
+      {date:"2023-08-17",ort:"Christoph",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Nachtschicht",note:""},
+      {date:"2023-08-24",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: ohne Begründung",note:""},
+      {date:"2023-08-31",ort:"Anker",guests:"Dominik",attendance:{Christoph:1,Patrick:1,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Oliver: Annelli hatte Mandel OP · Fabian: Porto Felice Jesolo",note:"Fabian per Videotelefonie zugeschaltet"},
+      {date:"2023-09-07",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Jan: zu viele Menschen im Haus · Oliver: Seitenstrangangina",note:""},
+      {date:"2023-09-14",ort:"Fabian",guests:"Dominik",attendance:{Christoph:0,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"Christoph: Urlaub",note:""},
+      {date:"2023-09-21",ort:"Klaas",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Jan: Urlaub · Fabian: Urlaub · André: Urlaub · Oliver: Urlaub",note:"Diskussion ob Ort an nicht zugänglichem Ort (Flughafen) sein kann"},
+      {date:"2023-09-28",ort:"Anker",guests:"Dominik",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:""},
+      {date:"2023-10-05",ort:"Anker",guests:"Dominik",attendance:{Christoph:0,Patrick:0,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht · André: Abstinenz · Patrick: nicht entschuldigt · Christoph: Tina nicht da",note:"Patrick nachträglich um 20:55 Uhr entschuldigt, zu spät"},
+      {date:"2023-10-12",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Jan: nicht entschuldigt · Christoph: Tina nicht da",note:""},
+      {date:"2023-10-19",ort:"Christoph",guests:"Klaas",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Oliver: raus · Patrick: nur in den Anker · Jan: raus",note:"Abstimmung Weihnachtsfeier 16.12."},
+      {date:"2023-10-26",ort:"Anker",guests:"Klaas, Alexander",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Nachtschicht · Patrick: Malediven",note:"Quizmaster Klaas Spieleabend"},
+      {date:"2023-11-02",ort:"Christoph",guests:"Dominik",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:0,Oliver:0},excuse:"Oliver: Nachtschicht · Patrick: Malediven · Fabian: Kids · Jan: entschuldigt",note:""},
+      {date:"2023-11-09",ort:"Anker",guests:"Alexander",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Oliver: Mandelentzündung · Jan: entschuldigt",note:""},
+      {date:"2023-11-16",ort:"André",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:0,Oliver:0},excuse:"Fabian: Oman · Jan: entschuldigt",note:""},
+      {date:"2023-11-23",ort:"Christoph",guests:"Klaas, Alexander",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:0,Oliver:0},excuse:"Fabian: Oman · Jan: entschuldigt",note:"Haddais Eck hat nun seine eigene Klingel!"},
+      {date:"2023-11-30",ort:"Christoph",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:0,Jan:0,Oliver:0},excuse:"Oliver: Frühschicht · Patrick: ohne Begründung · André: Bere vom Flughafen · Christoph: Tina geht aus · Jan: entschuldigt",note:"1 Bier im Anker für den Punkt!"},
+      {date:"2023-12-07",ort:"Christoph",guests:"Dominik",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Oliver: Krank · Jan: entschuldigt",note:""},
+      {date:"2023-12-14",ort:"Klaas",guests:"Dominik",attendance:{Christoph:1,Patrick:0,Fabian:1,André:0,Jan:0,Oliver:0},excuse:"Oliver: Frühschicht · Patrick: ohne Begründung · André: krank · Jan: entschuldigt",note:""},
+      {date:"2023-12-21",ort:"André",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Patrick: ohne Begründung · Christoph: Kroatien · Jan: entschuldigt",note:""},
+      {date:"2023-12-28",ort:"Christoph",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht · Patrick: ohne Begründung",note:"Planung über den Stammtisch Pokal"},
+    ]
+  },
+  2024: {
+    maxPossible: 51,
+    members: ["Christoph","Patrick","Fabian","André","Jan","Oliver"],
+    totals: {Christoph:35, Patrick:22.5, Fabian:41, André:35.5, Jan:29, Oliver:15.5},
+    unexcused: {"2024-01-25":["Jan"],"2024-02-01":["Christoph","André","Oliver"],"2024-02-29":["Patrick","Jan"],"2024-03-28":["André"],"2024-05-02":["Oliver"],"2024-07-11":["Patrick","André"],"2024-10-17":["Patrick"],"2024-11-07":["Patrick"],"2024-11-14":["Patrick","Oliver"],"2024-12-19":["Patrick","Oliver"]},
+    excused_no_reason: {"Christoph":2,"Patrick":10,"Fabian":2,"André":3,"Jan":8,"Oliver":9},
+    treffen: [
+      {date:"2024-01-04",ort:"Christoph",guests:"Simon",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Oliver: Trainertreff · Jan: halb entschuldigt ohne Begründung",note:""},
+      {date:"2024-01-11",ort:"Fabian",guests:"Simon",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"Patrick: Messe",note:""},
+      {date:"2024-01-18",ort:"Fabian",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"",note:""},
+      {date:"2024-01-25",ort:"Christoph",guests:"Simon, Dominik",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Jan: erst entschuldigt später gar nicht",note:"Haddais Eck hat einen Spielautomaten bekommen"},
+      {date:"2024-02-01",ort:"Fabian",guests:"-",attendance:{Christoph:0,Patrick:1,Fabian:1,André:0,Jan:0,Oliver:0},excuse:"André: krank (zu spät) · Jan: zu spät · Oliver: ohne Begründung",note:""},
+      {date:"2024-02-08",ort:"Christoph",guests:"Simon",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Jan: zu müde",note:""},
+      {date:"2024-02-15",ort:"Christoph",guests:"Alexander",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Nachschicht",note:""},
+      {date:"2024-02-22",ort:"Anker und André",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Nachschicht · Christoph: Rückweg Italien · Patrick: Wolle Geburtstag",note:"Neue Anker Kellnerin abkassiert um 21:45, danach Tankstellen-Bier bei André"},
+      {date:"2024-02-29",ort:"Klaas",guests:"Klaas, Simon",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Patrick: ohne Begründung · Jan: ohne Begründung",note:""},
+      {date:"2024-03-07",ort:"Fabian",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Jan: geschäftlich Mannheim · Patrick: Bergen",note:""},
+      {date:"2024-03-14",ort:"Christoph",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Jan: geschäftlich Hamburg · Oliver: Frühschicht",note:""},
+      {date:"2024-03-21",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:0,Jan:1,Oliver:0.5},excuse:"André: Urlaub · Oliver: nach 21:30",note:""},
+      {date:"2024-03-28",ort:"Castell",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:0,Jan:1,Oliver:1},excuse:"André: nicht entschuldigt · Christoph: verplant · Patrick: Castell",note:""},
+      {date:"2024-04-04",ort:"Christoph",guests:"Alexander",attendance:{Christoph:1,Patrick:1,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"André: nicht entschuldigt · Oliver: was anderes",note:""},
+      {date:"2024-04-11",ort:"Klaas",guests:"Klaas, Alexander",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Jan: Urlaub · Oliver: Frühschicht",note:""},
+      {date:"2024-04-18",ort:"Christoph",guests:"Simon",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:0,Oliver:1},excuse:"Patrick: ohne Begründung · Fabian: AIDA Miri · Jan: Dortmund",note:""},
+      {date:"2024-04-25",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht · Haddai: Messe",note:""},
+      {date:"2024-05-02",ort:"André",guests:"Simon",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: nicht entschuldigt",note:"Einweihung Andrés Eck"},
+      {date:"2024-05-23",ort:"Anker",guests:"Simon",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: Familie · Oliver: Vater-Kind-Zelten",note:"Stammtisch im Zuge der Vaterschaftswanderung"},
+      {date:"2024-05-30",ort:"-",guests:"Simon",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Jan: geschäftlich unterwegs",note:""},
+      {date:"2024-06-06",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:1,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"André: Eric · Haddai: Urlaub · Oliver: nicht entschuldigt",note:"Oliver telefonisch bei Fyle, zählt nicht"},
+      {date:"2024-06-13",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Jan: Berlin · Oliver: Nachbarn · Patrick: ohne Begründung · André: nicht entschuldigt · Christoph: nicht entschuldigt",note:"Ausgefallen – Feyle wäre einziger Teilnehmer gewesen"},
+      {date:"2024-06-20",ort:"Anker",guests:"Alexander, Frank",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:"Anpassung Statuten, neue Nr. 5, 6, 7"},
+      {date:"2024-06-27",ort:"Anker",guests:"Dominik",attendance:{Christoph:1,Patrick:0.5,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:"Beschluss Stammtisch 19.06. wegen Deutschland-Spiel"},
+      {date:"2024-07-18",ort:"-",guests:"Alexander, Simon",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:0,Oliver:0},excuse:"Jan: Besuch · Oliver: Frühschicht · Patrick: Urlaub · Fabian: Kids",note:""},
+      {date:"2024-07-25",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:0,Jan:1,Oliver:1},excuse:"André: krank",note:""},
+      {date:"2024-08-01",ort:"Castell",guests:"Alexander",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:""},
+      {date:"2024-08-08",ort:"Christoph",guests:"Dominik",attendance:{Christoph:1,Patrick:0,Fabian:1,André:0.5,Jan:1,Oliver:1},excuse:"Patrick und André: nicht entschuldigt",note:""},
+      {date:"2024-08-15",ort:"-",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"André und Feyle: Parookaville · Christoph: Geburtstag · Patrick: Pflanzen · Oliver: Frühschicht",note:"Jan hätte teilgenommen, kein Partner, ausgefallen"},
+      {date:"2024-08-22",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:"Erster Stammtisch mit ALLEN Mitgliedern!"},
+      {date:"2024-08-29",ort:"Klaas",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"Christoph: Wochenende saufen · Oliver: heftiges WE · Patrick: arbeiten · André: keine Begründung",note:""},
+      {date:"2024-09-05",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Oliver: krank · Jan: Urlaub packen · Fabian: Urlaub · André: nicht entschuldigt",note:""},
+      {date:"2024-09-12",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Christoph: Gartenfreunde · Fabian: Urlaub · Patrick: essen · Jan: Urlaub · Oliver: keine Begründung · André: nicht entschuldigt",note:"Ausgefallen – alle abgesagt"},
+      {date:"2024-09-19",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: Urlaub · Oliver: Bodensee · Christoph: Urlaub",note:""},
+      {date:"2024-09-26",ort:"Klaas",guests:"Alexander, Klaas",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Jan: ohne Begründung · Patrick: Urlaub · Oliver: erkältet",note:"Einweihung Zapfanlage Klaas im Garten"},
+      {date:"2024-10-03",ort:"-",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Familienzeit",note:""},
+      {date:"2024-10-10",ort:"André",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: arbeiten · Oliver: Frühschicht",note:"André behauptet Trump wird Präsident"},
+      {date:"2024-10-17",ort:"André",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Annelie krank",note:""},
+      {date:"2024-10-24",ort:"André",guests:"Klaas",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Jan: Kopfschmerzen",note:""},
+      {date:"2024-10-31",ort:"-",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Fabian: Bodensee · Patrick: Bodensee · Jan: Elsass · Oliver: Familie · Haddai: Geburtstag · André: nicht entschuldigt",note:"Ausgefallen"},
+      {date:"2024-11-07",ort:"Alte Post",guests:"Alexander, Simon",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Fabian: Wellness · Oliver: am Arsch · Patrick: keine Begründung",note:""},
+      {date:"2024-11-14",ort:"Alte Post",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"Patrick: keine Begründung",note:""},
+      {date:"2024-11-21",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Oliver: krank · Jan: Alice unterwegs, Kids allein · Patrick: keine Begründung",note:""},
+      {date:"2024-10-28",ort:"-",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Jan: Firmenveranstaltung · Oliver: Halloween Wöllstein · André: Eric · Haddai: Fele Geburtstag · Patrick: nicht entschuldigt",note:"Ausgefallen – Feyle einziger Teilnehmer"},
+      {date:"2024-11-28",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: keine Begründung · Oliver: Frühschicht",note:"Anker ohne Begründung geschlossen"},
+      {date:"2024-12-05",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · Oliver: keine Begründung · Christoph: es schafft nicht mehr",note:""},
+      {date:"2024-12-12",ort:"-",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · Oliver: Frühschicht · André: Bere Veranstaltung",note:"Edvin hat den Anker übernommen und hatte Schuhe an"},
+      {date:"2024-12-19",ort:"Christoph",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Patrick: nicht entschuldigt · Jan: geschäftlich · Christoph: Tina Weihnachtsfeier",note:""},
+      {date:"2024-12-26",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · Oliver: Frühschicht · Christoph: Weihnachtsfeier",note:""},
+      {date:"2025-01-02",ort:"Patrick",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"André: ohne Begründung · Haddai: krank · Jan: ohne Begründung · Patrick: nicht entschuldigt · Feyle: Miri Geburtstag",note:"Ausgefallen – Oliver wäre einziger gewesen"},
+      {date:"2025-01-09",ort:"André",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: ohne Begründung · Patrick: nicht entschuldigt",note:""},
+    ]
+  },
+  2025: {
+    maxPossible: 51,
+    members: ["Christoph","Patrick","Fabian","André","Jan","Oliver"],
+    totals: {Christoph:39, Patrick:26, Fabian:33, André:33.5, Jan:33, Oliver:9.5},
+    unexcused: {"2025-01-30":["Patrick"],"2025-04-24":["Patrick","Oliver"],"2025-06-12":["Oliver"],"2025-08-07":["Fabian","André"],"2025-11-06":["Christoph"],"2025-11-13":["Patrick"],"2025-11-20":["Patrick"],"2025-12-18":["Patrick","Jan","Oliver"]},
+    excused_no_reason: {"Christoph":3,"Patrick":5,"Fabian":2,"André":3,"Jan":1,"Oliver":5},
+    treffen: [
+      {date:"2025-01-16",ort:"Christoph",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:0,Jan:0,Oliver:0},excuse:"Oliver: nicht fit · Jan: braucht Ruhe",note:"Patrick: Stammmitgliedschaft unklar"},
+      {date:"2025-01-23",ort:"-",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Oliver: Zahn OP · Jan: Urlaub · Patrick: nicht entschuldigt",note:""},
+      {date:"2025-01-30",ort:"Anker",guests:"Dominik",attendance:{Christoph:1,Patrick:1,Fabian:0,André:1,Jan:0,Oliver:0},excuse:"Fabian: Kids · Oliver: Frühschicht · Jan: Rückreise",note:""},
+      {date:"2025-02-06",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"André: Hüfte · Feyle: Gregor Geburtstag · Haddai: Erholung · Jan: mentale Gesundheit · Patrick: nicht entschuldigt",note:"Ausgefallen – Oliver motiviert, keiner gefunden"},
+      {date:"2025-02-13",ort:"-",guests:"Alexander",attendance:{Christoph:1,Patrick:0,Fabian:1,André:0.5,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt",note:"André kam nach 21:30"},
+      {date:"2025-02-20",ort:"Klaas und Wunderlich",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Patrick: nicht entschuldigt · Oliver: wollte früher",note:""},
+      {date:"2025-02-27",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"André: keine Begründung · Oliver: Anneli krank · Fabian: Influenza · Patrick: Bild als Begründung · Jan: malad",note:"Ausgefallen – Haddai allein"},
+      {date:"2025-03-06",ort:"Anker",guests:"Klaas, Dean, Konstantin",attendance:{Christoph:1,Patrick:0,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · André: Kind aufpassen · Oliver: Familie krank",note:""},
+      {date:"2025-03-13",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: Vater Geburtstag · Christoph: Tina Fasching · Oliver: nicht fit",note:""},
+      {date:"2025-03-20",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:"Jan und Oliver kurz im Castell um 19:00"},
+      {date:"2025-03-27",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Geburtstag",note:""},
+      {date:"2025-04-03",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:0.5,Jan:1,Oliver:1},excuse:"",note:"André kam nach 21:30 Uhr"},
+      {date:"2025-04-10",ort:"Anker",guests:"Alexander",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:"André kam nach 21:30 Uhr"},
+      {date:"2025-04-17",ort:"Wunderlich",guests:"Dominik",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:""},
+      {date:"2025-04-24",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Jan: Berlin · Oliver: Frühschicht",note:""},
+      {date:"2025-05-01",ort:"Gartenfreunde",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:0,André:0,Jan:1,Oliver:0},excuse:"Fabian: Frühlingsfest · Oliver: nicht entschuldigt · André: nicht entschuldigt",note:""},
+      {date:"2025-05-08",ort:"-",guests:"Alexander, Dominik, Timo",attendance:{Christoph:0,Patrick:1,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"Oliver: wollte einladen, nicht in die Stadt · Haddai: ohne Begründung · André: nicht entschuldigt",note:""},
+      {date:"2025-05-15",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oli: nicht entschuldigt · Patrick: nicht entschuldigt",note:""},
+      {date:"2025-05-22",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:0,André:0,Jan:1,Oliver:0},excuse:"Feyle: Frühlingsfest · Oliver: nicht entschuldigt · André: nicht entschuldigt",note:""},
+      {date:"2025-05-29",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Jan: Urlaub · Oliver: nicht entschuldigt · Patrick: nicht entschuldigt · André: nicht entschuldigt · Christoph: nicht entschuldigt",note:"Ausgefallen – Feyle einzig verfügbar"},
+      {date:"2025-06-05",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:""},
+      {date:"2025-06-12",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:0,André:0,Jan:1,Oliver:1},excuse:"André: krank · Fabian: Flutlicht, Tore und Bier",note:""},
+      {date:"2025-06-19",ort:"-",guests:"Dominik, Alexander",attendance:{Christoph:1,Patrick:1,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"André hatte sich entschuldigt, kam aber doch · Oliver: nicht entschuldigt",note:""},
+      {date:"2025-06-26",ort:"Anker",guests:"Giuseppe",attendance:{Christoph:1,Patrick:1,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht · Feyle: ohne Begründung",note:""},
+      {date:"2025-07-03",ort:"Anker",guests:"Dominik, Timo",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: ohne Begründung",note:""},
+      {date:"2025-07-10",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Patrick: keine Begründung · André: Urlaub · Christoph: Urlaub · Feyle: keine Begründung · Jan: zu Dominik",note:"Ausgefallen – Oliver motiviert, niemanden gefunden"},
+      {date:"2025-07-17",ort:"Anker",guests:"Klaas, Ulrich, Giuseppe, Tobias",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:""},
+      {date:"2025-07-24",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Jan: keine Begründung · Oliver: Frühschicht",note:""},
+      {date:"2025-07-31",ort:"-",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:""},
+      {date:"2025-08-07",ort:"Christoph",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: Teammeeting · Oliver: Frühschicht",note:""},
+      {date:"2025-08-14",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:""},
+      {date:"2025-08-21",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"",note:"Gardasee Wochenende – alle 0 um Diskussion zu vermeiden"},
+      {date:"2025-08-28",ort:"Oli",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Oliver: Familienabend · André: SMS-Festival · Jan: Baustelle · Feyle: nicht entschuldigt",note:"André auf SMS-Festival – Feyle erst Wo? dann nicht gekommen"},
+      {date:"2025-09-04",ort:"Jan",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Vater ausgemacht",note:""},
+      {date:"2025-09-11",ort:"Jan",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Jan: sehr müde · Oliver: Urlaub",note:""},
+      {date:"2025-09-18",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:1,Oliver:1},excuse:"Patrick: Wöllstein zeitlich nicht · Fabian: Urlaub",note:""},
+      {date:"2025-09-25",ort:"Anker",guests:"Alexander",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:1,Oliver:1},excuse:"Fabian: Urlaub · Patrick: Urlaub",note:""},
+      {date:"2025-10-02",ort:"Christoph",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"André: Urlaub · Christoph: Urlaub · Oliver: Frühschicht · Patrick: nicht entschuldigt",note:""},
+      {date:"2025-10-09",ort:"Anker",guests:"Alexander, Giuseppe",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0.5},excuse:"",note:"Peter aus Hawaii war da. Oliver nach 21:30"},
+      {date:"2025-10-16",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:0.5,Jan:0,Oliver:0},excuse:"Oliver: Frühschicht · Jan: langes WE",note:""},
+      {date:"2025-10-23",ort:"Klaas",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:0,André:1,Jan:0,Oliver:0},excuse:"Feyle: Haddai angeboten, bei Haddai stattgefunden · Oliver: Anni aufpassen · Jan: Rhinos saufen",note:""},
+      {date:"2025-10-30",ort:"Hobel",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · Fabian: krank · Oliver: krank Frühschicht",note:""},
+      {date:"2025-11-06",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:0,André:0,Jan:1,Oliver:0},excuse:"Fabian: krank · Oliver: krank · André: Polen",note:""},
+      {date:"2025-11-13",ort:"Anker",guests:"Klaas",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Oliver: Nachschicht · Jan: nicht entschuldigt · Patrick: nicht entschuldigt",note:""},
+      {date:"2025-11-20",ort:"André",guests:"Alexander",attendance:{Christoph:0,Patrick:0,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"Christoph: Messe · André: Eric · Patrick: will nicht nach Aalen · Oliver: Nachschicht",note:""},
+      {date:"2025-11-27",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Christoph: keine Begründung · Patrick: keine Begründung · Oliver: Frühschicht",note:""},
+      {date:"2025-12-04",ort:"-",guests:"Alexander",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"Patrick: nicht entschuldigt",note:""},
+      {date:"2025-12-11",ort:"Anker",guests:"Alexander",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · Oliver: Frühschicht",note:""},
+      {date:"2025-12-18",ort:"-",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: flach · Patrick: keine Begründung",note:""},
+      {date:"2025-12-25",ort:"-",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Patrick: keine Begründung · Oliver: Frühschicht · Christoph: Tina nicht da · André: keine Begründung · Jan: Besuch",note:"Ausgefallen – Feyle einzig verfügbar"},
+      {date:"2026-01-01",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: keine Begründung · Oliver: krank",note:""},
+      {date:"2026-01-08",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Jan: nicht entschuldigt · Christoph: Weihnachtsfeier · André: krank · Oliver: nicht entschuldigt · Patrick: nicht entschuldigt",note:"Ausgefallen – Feyle einzig verfügbar"},
+    ]
+  },
+  2026: {
+    maxPossible: 50,
+    members: ["Christoph","Patrick","Fabian","André","Jan","Oliver"],
+    totals: {Christoph:13.5, Patrick:6.5, Fabian:13, André:15, Jan:11, Oliver:2.5},
+    unexcused: {"2026-01-22":["Patrick"],"2026-03-26":["Patrick"]},
+    excused_no_reason: {"Christoph":0,"Patrick":1,"Fabian":0,"André":0,"Jan":0,"Oliver":0},
+    treffen: [
+      {date:"2026-01-08",ort:"Anker",guests:"-",attendance:{Christoph:0.5,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · Oliver: noch im Geschäft",note:""},
+      {date:"2026-01-15",ort:"Anker",guests:"Alexander, Timo",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Patrick: Messe · Jan: geschäftlich · Oliver: Frühschicht",note:""},
+      {date:"2026-01-22",ort:"Anker",guests:"Timo",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0.5},excuse:"Patrick: nicht entschuldigt",note:"Oliver kam nach 21:30 Uhr"},
+      {date:"2026-01-29",ort:"Klaas",guests:"Klaas",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Jan: nicht entschuldigt · Oliver: Grippe · Patrick: Skifahren",note:""},
+      {date:"2026-02-05",ort:"Anker",guests:"Alexander, Timo",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: nicht fit",note:""},
+      {date:"2026-02-12",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht · Haddai: krank",note:""},
+      {date:"2026-02-19",ort:"Anker",guests:"Timo",attendance:{Christoph:1,Patrick:1,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht · Feyle: Miri in Bonn",note:""},
+      {date:"2026-02-26",ort:"Anker",guests:"Timo, Alexander",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Oliver: Nachschicht · Patrick: Skifahren · Jan: zu fertig",note:""},
+      {date:"2026-03-05",ort:"Anker",guests:"Timo",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Nachtschicht",note:""},
+      {date:"2026-03-12",ort:"Anker",guests:"Timo, Dominik",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: Skifahren · Oliver: Frühschicht",note:""},
+      {date:"2026-03-19",ort:"Anker",guests:"Timo, Giuseppe, Tobi Kaiser",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:""},
+      {date:"2026-03-26",ort:"Anker",guests:"Timo, Alexander",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Patrick: keine Begründung · Oliver: Frühschicht · Fabian: Hamburg",note:""},
+      {date:"2026-04-02",ort:"André",guests:"Timo, Alexander, Dominik",attendance:{Christoph:1,Patrick:0.5,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Schwabenpark, platt",note:"Patrick kam nach 21:30 Uhr"},
+      {date:"2026-04-09",ort:"Anker",guests:"Timo",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:""},
+      {date:"2026-04-16",ort:"André",guests:"Timo, Alexander",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Jan: Geschäftsreise · Patrick: nicht entschuldigt",note:""},
+      {date:"2026-04-23",ort:"-",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Oliver: Frühschicht · Haddai: Messe · Jan: Urlaub · André: Urlaub · Patrick: nicht wenn bei Feyle",note:"Ausgefallen – nur Feyle als Mitglied da"},
+    ]
+  }
+};
+
+let isAdmin = false;
+let currentDashYear = 2026;
+let currentTreffenYear = 2026;
+
+function saveData() {
+  localStorage.setItem('stammtisch_data', JSON.stringify(appData));
+}
+
+function getAllTreffen(year) {
+  const hist = historicalData[year];
+  const custom = appData.treffen.filter(t => new Date(t.date).getFullYear() === year);
+  if (hist) {
+    return [...hist.treffen, ...custom].sort((a,b) => new Date(a.date) - new Date(b.date));
+  }
+  return custom.sort((a,b) => new Date(a.date) - new Date(b.date));
+}
+
+function getYearStats(year) {
+  const hist = historicalData[year];
+  const treffen = getAllTreffen(year);
+  const members = hist ? hist.members : appData.members;
+  const maxP = hist ? hist.maxPossible : 50;
+
+  // Totals from historical (authoritative) + any custom additions
+  let totals = {};
+  if (hist) {
+    totals = {...hist.totals};
+    // add custom treffen points
+    appData.treffen.filter(t => new Date(t.date).getFullYear() === year).forEach(t => {
+      members.forEach(m => { totals[m] = (totals[m]||0) + (t.attendance[m]||0); });
+    });
+  } else {
+    members.forEach(m => totals[m] = 0);
+    treffen.forEach(t => { members.forEach(m => { totals[m] = (totals[m]||0) + (t.attendance[m]||0); }); });
+  }
+
+  const ausgefallen = treffen.filter(t => t.ort === '-' || !t.ort || Object.values(t.attendance).every(v=>v===0)).length;
+  const stattgefunden = treffen.length - ausgefallen;
+
+  return { totals, members, maxP, treffen, stattgefunden, ausgefallen };
+}
+
+// ============================================================
+// RENDER DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const years = [2023,2024,2025,2026];
+  const tabsEl = document.getElementById('dashYearTabs');
+  tabsEl.innerHTML = years.map(y =>
+    `<button class="year-tab ${y===currentDashYear?'active':''}" onclick="setDashYear(${y})">${y}</button>`
+  ).join('');
+
+  // Statuten in dashboard
+  const dsc = document.getElementById('dashStatutenContent');
+  if (dsc) dsc.innerHTML = `<ul class="statut-list">${appData.statuten.map((s,i)=>`<li><span class="statut-num">${i+1}</span><span>${s}</span></li>`).join('')}</ul>`;
+
+  const {totals, members, maxP, treffen, stattgefunden, ausgefallen} = getYearStats(currentDashYear);
+
+  const statsGrid = document.getElementById('statsGrid');
+  // Ø Teilnehmer/Treffen: echte Anwesenheiten (1 oder 0.5 = 1 Person), nur stattgefundene Treffen
+  const totalPresent = treffen.reduce((sum, t) => sum + members.filter(m => (t.attendance[m]||0) > 0).length, 0);
+  const avgPerTreffen = stattgefunden > 0 ? (totalPresent / stattgefunden).toFixed(2) : 0;
+  statsGrid.innerHTML = `
+    <div class="stat-card"><div class="stat-label">Mögliche Stammtische</div><div class="stat-value">${maxP}</div></div>
+    <div class="stat-card"><div class="stat-label">Stattgefunden</div><div class="stat-value">${stattgefunden}</div></div>
+    <div class="stat-card"><div class="stat-label">Ausgefallen</div><div class="stat-value" style="color:var(--danger)">${ausgefallen}</div></div>
+    <div class="stat-card"><div class="stat-label">Ø Teilnehmer/Treffen</div><div class="stat-value">${avgPerTreffen}</div><div class="stat-sub">exkl. ausgefallene</div></div>
+    <div class="stat-card"><div class="stat-label">Mitglieder</div><div class="stat-value">${members.length}</div></div>
+  `;
+
+  const ranked = members.map(m => ({name:m, pts:totals[m]||0, pct:(totals[m]||0)/maxP}))
+    .sort((a,b)=>b.pts-a.pts);
+  const maxPts = ranked[0]?.pts || 1;
+
+  const table = document.getElementById('rankingTable');
+  table.innerHTML = `<thead><tr>
+    <th>#</th><th>Mitglied</th><th>Punkte</th><th style="min-width:160px">Anwesenheit</th><th>Quote</th>
+  </tr></thead><tbody>${ranked.map((r,i)=>`
+    <tr>
+      <td><span class="rank-badge rank-${i<3?i+1:'other'}">${i+1}</span></td>
+      <td>${r.name}</td>
+      <td>${r.pts}</td>
+      <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${(r.pts/maxPts*100).toFixed(0)}%"></div></div></div></td>
+      <td class="pct-text">${(r.pct*100).toFixed(2)}%</td>
+    </tr>`).join('')}</tbody>`;
+
+  renderExtraStats(treffen, members, stattgefunden);
+}
+
+const memberColors = {
+    "Christoph":"#c9a84c","Patrick":"#e07b39","Fabian":"#6aaa7a",
+    "André":"#7a9fd4","Jan":"#c96a9a","Oliver":"#9a7ad4"
+  };
+
+function renderExtraStats(treffen, members, stattgefunden) {
+  // 1. Längste aufeinanderfolgende Teilnahmen — sorted by streak desc
+  const streaks = {};
+  members.forEach(m => {
+    let max=0, cur=0;
+    treffen.forEach(t => {
+      const v = t.attendance[m] ?? 0;
+      if (v > 0) { cur++; max=Math.max(max,cur); } else { cur=0; }
+    });
+    streaks[m] = max;
+  });
+  const sortedByStreak = [...members].sort((a,b) => streaks[b]-streaks[a]);
+  const streakWinner = sortedByStreak[0];
+
+  // 2. Meistbesuchte Location
+  const locs = {};
+  treffen.forEach(t => {
+    if (t.ort && t.ort!=='-') {
+      t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(loc => {
+        const l = loc.trim();
+        if (l) locs[l] = (locs[l]||0)+1;
+      });
+    }
+  });
+  const topLoc = Object.entries(locs).sort((a,b)=>b[1]-a[1])[0];
+
+  // 3. Stammtische mit ALLEN Mitgliedern
+  const allPresent = treffen.filter(t => members.every(m => (t.attendance[m]||0) > 0));
+
+  // 4. Ø Anwesenheit pro Mitglied: war überhaupt da (0,5 = anwesend), alle Treffen inkl. ausgefallene
+  const avgAtt = {};
+  const totalTreffen = treffen.length;
+  members.forEach(m => {
+    const attended = treffen.filter(t => (t.attendance[m]||0) > 0).length;
+    avgAtt[m] = totalTreffen > 0 ? (attended/totalTreffen*100).toFixed(0) : 0;
+  });
+
+  // 5. Three absence categories from pre-extracted data + custom treffen
+  const hist = historicalData[currentDashYear];
+  const noExcuse   = {};  // unentschuldigt
+  const excNoReason = {}; // entschuldigt ohne Begründung
+  members.forEach(m => { noExcuse[m] = 0; excNoReason[m] = 0; });
+
+  // Historical unexcused (from red cells)
+  if (hist && hist.unexcused) {
+    Object.values(hist.unexcused).forEach(mList => {
+      mList.forEach(m => { if (noExcuse[m] !== undefined) noExcuse[m]++; });
+    });
+  }
+  // Historical excused-no-reason
+  if (hist && hist.excused_no_reason) {
+    members.forEach(m => { excNoReason[m] += hist.excused_no_reason[m] || 0; });
+  }
+
+  // Custom treffen: parse reason tags stored via setReason
+  appData.treffen.filter(t => new Date(t.date).getFullYear() === currentDashYear).forEach(t => {
+    if (!t.excuse) return;
+    members.forEach(m => {
+      const aliases = m === 'Oliver' ? ['Oliver','Oli'] : m === 'Fabian' ? ['Fabian','Feyle'] : [m];
+      for (const alias of aliases) {
+        if (new RegExp(alias + '.*?hat sich nicht entschuldigt', 'i').test(t.excuse)) { noExcuse[m]++; break; }
+        if (new RegExp(alias + '.*?(ohne Begründung|keine Begründung)', 'i').test(t.excuse)) { excNoReason[m]++; break; }
+      }
+    });
+  });
+
+  // excused WITH reason = total absences (from treffen data) - unexcused - excused_no_reason
+  const excWithReason = {};
+  members.forEach(m => {
+    const totalAbsent = treffen.filter(t => (t.attendance[m]||0) === 0).length;
+    excWithReason[m] = Math.max(0, totalAbsent - noExcuse[m] - excNoReason[m]);
+  });
+
+  const sortedByNoExcuse = [...members].sort((a,b) => noExcuse[b]-noExcuse[a]);
+  const noExcuseWinner = sortedByNoExcuse[0];
+
+  // 6. Meiste Gastauftritte
+  const guestCount = {};
+  treffen.forEach(t => {
+    if (!t.guests || t.guests==='-') return;
+    t.guests.split(/,\s*|\s+und\s+/i).forEach(g => {
+      const name = g.trim();
+      if (name) guestCount[name] = (guestCount[name]||0)+1;
+    });
+  });
+  const allGuests = Object.entries(guestCount).sort((a,b)=>b[1]-a[1]);
+
+  const allPresentDates = allPresent.map(t =>
+    `<div class="all-attend-item">📅 ${new Date(t.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}</div>`
+  ).join('') || '<div class="all-attend-item">Noch keiner</div>';
+
+  const guestHtml = allGuests.length > 0
+    ? allGuests.map(([g,n],i)=>`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;font-size:0.9rem"><span class="rank-badge rank-${i<3?i+1:'other'}" style="min-width:24px;width:24px;height:24px;font-size:0.75rem">${i+1}</span><span style="flex:1">${g}</span><span style="color:var(--gold2);font-weight:500">${n}×</span></div>`).join('')
+    : '<span style="color:var(--muted)">Noch keine Daten</span>';
+
+  const yearChartHtml = buildYearChart(currentDashYear, treffen, members);
+  document.getElementById('extraStats').innerHTML = `
+    <h2 class="section-title" style="margin-top:2rem">📊 Weitere Auswertungen</h2>
+    <div class="extra-stats-grid">
+      <div class="extra-card">
+        <div class="ec-title">🔥 Längste Teilnahme-Serie</div>
+        <div class="ec-winner">🏅 ${streakWinner}</div>
+        <div class="ec-sub">${streaks[streakWinner]} Stammtische in Folge</div>
+        <div style="margin-top:0.75rem">${sortedByStreak.map((m,i)=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0;border-bottom:1px solid var(--border)"><span style="font-size:0.75rem;color:var(--muted);min-width:16px">${i+1}.</span><span style="flex:1;font-size:0.85rem">${m}</span><span style="color:var(--gold2);font-weight:500">${streaks[m]}×</span></div>`).join('')}</div>
+      </div>
+      <div class="extra-card">
+        <div class="ec-title">📍 Meistbesuchte Location</div>
+        ${topLoc ? `<div class="ec-winner">🍺 ${topLoc[0]}</div><div class="ec-sub">${topLoc[1]}× besucht</div>
+        <div style="margin-top:0.75rem">${Object.entries(locs).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([l,n])=>`<div style="display:flex;justify-content:space-between;font-size:0.85rem;padding:0.22rem 0;border-bottom:1px solid var(--border)"><span>${l}</span><span style="color:var(--gold2)">${n}×</span></div>`).join('')}</div>` : '<div class="ec-sub">Keine Daten</div>'}
+      </div>
+      <div class="extra-card">
+        <div class="ec-title">🌟 Stammtische mit ALLEN Mitgliedern</div>
+        <div class="ec-winner">${allPresent.length}× vollständig</div>
+        <div class="all-attend-list">${allPresentDates}</div>
+      </div>
+
+      <div class="extra-card">
+        <div class="ec-title">👥 Häufigste Gäste</div>
+        ${guestHtml}
+      </div>
+      <div class="extra-card">
+        <div class="ec-title">✅ Entschuldigt mit Begründung</div>
+        <div style="margin-top:0.5rem">${[...members].sort((a,b)=>excWithReason[b]-excWithReason[a]).map((m,i)=>`
+          <div style="display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:0.75rem;color:var(--muted);min-width:16px">${i+1}.</span>
+            <span style="flex:1;font-size:0.85rem">${m}</span>
+            <span style="color:var(--success);font-weight:500">${excWithReason[m]}×</span>
+          </div>`).join('')}</div>
+      </div>
+      <div class="extra-card">
+        <div class="ec-title">〜 Entschuldigt ohne Begründung</div>
+        <div style="margin-top:0.5rem">${[...members].sort((a,b)=>excNoReason[b]-excNoReason[a]).map((m,i)=>`
+          <div style="display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:0.75rem;color:var(--muted);min-width:16px">${i+1}.</span>
+            <span style="flex:1;font-size:0.85rem">${m}</span>
+            <span style="color:var(--gold);font-weight:500">${excNoReason[m]}×</span>
+          </div>`).join('')}</div>
+      </div>
+      <div class="extra-card">
+        <div class="ec-title">⚠️ Unentschuldigt gefehlt</div>
+        <div style="margin-top:0.5rem">${sortedByNoExcuse.map((m,i)=>`
+          <div style="display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:0.75rem;color:var(--muted);min-width:16px">${i+1}.</span>
+            <span style="flex:1;font-size:0.85rem">${m}</span>
+            <span style="color:${noExcuse[m]>0?'var(--danger)':'var(--success)'};font-weight:500">${noExcuse[m]}×</span>
+          </div>`).join('')}</div>
+      </div>
+    </div>`;
+}
+
+function setDashYear(y) { currentDashYear = y; renderDashboard(); }
+
+// ============================================================
+// RENDER TREFFEN
+// ============================================================
+function renderTreffen() {
+  const years = [2023,2024,2025,2026];
+  const tabsEl = document.getElementById('treffenYearTabs');
+  tabsEl.innerHTML = years.map(y =>
+    `<button class="year-tab ${y===currentTreffenYear?'active':''}" onclick="setTreffenYear(${y})">${y}</button>`
+  ).join('');
+
+  const treffen = getAllTreffen(currentTreffenYear);
+  const hist = historicalData[currentTreffenYear];
+  const members = hist ? hist.members : appData.members;
+
+  const list = document.getElementById('treffenList');
+  if (!treffen.length) { list.innerHTML = '<p style="color:var(--muted)">Noch keine Treffen erfasst.</p>'; return; }
+
+  list.innerHTML = treffen.map((t,idx) => {
+    const ausgefallen = !t.ort || t.ort === '-' || Object.values(t.attendance).every(v=>v===0);
+    const total = Object.values(t.attendance).reduce((a,b)=>a+b,0);
+    const dateStr = new Date(t.date).toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'long', year:'numeric'});
+    const dots = members.map(m => {
+      const v = t.attendance[m] ?? 0;
+      const cls = v===1?'present':v===0.5?'half':'absent';
+      const icon = v===1?'✓':v===0.5?'½':'✗';
+      return `<span class="dot ${cls}">${icon} ${m}</span>`;
+    }).join('');
+
+    return `<div class="treffen-card" onclick="toggleTreffen(${idx})">
+      ${ausgefallen?'<div class="ausgefallen-banner">⚠ Ausgefallen</div>':''}
+      <div class="treffen-header">
+        <div>
+          <div class="treffen-date">${dateStr}</div>
+          <div class="treffen-ort">📍 ${t.ort && t.ort!=='-' ? t.ort : 'Kein Ort'}</div>
+        </div>
+        <div class="treffen-score">
+          <div class="num">${total}</div>
+          <div class="label">Punkte</div>
+        </div>
+      </div>
+      <div class="attendance-dots">${dots}</div>
+      <div class="treffen-detail" id="detail-${currentTreffenYear}-${idx}">
+        ${t.guests && t.guests !== '-' ? `<div class="detail-row"><strong>Gäste:</strong><p>${t.guests}</p></div>` : ''}
+        ${t.excuse ? `<div class="detail-row"><strong>Entschuldigungen:</strong><p>${t.excuse}</p></div>` : ''}
+        ${t.note ? `<div class="detail-row"><strong>Bemerkungen:</strong><p>${t.note}</p></div>` : ''}
+        ${!t.guests && !t.excuse && !t.note ? '<p style="color:var(--muted);font-size:0.85rem">Keine weiteren Details.</p>' : ''}
+        ${isAdmin ? `<div style="margin-top:0.75rem"><button class="btn-danger" onclick="deleteTreffen('${t.date}',event)">Löschen</button></div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTreffen(idx) {
+  const el = document.getElementById(`detail-${currentTreffenYear}-${idx}`);
+  if (el) el.classList.toggle('open');
+}
+
+function setTreffenYear(y) { currentTreffenYear = y; renderTreffen(); }
+
+function deleteTreffen(date, e) {
+  e.stopPropagation();
+  appData.treffen = appData.treffen.filter(t => t.date !== date);
+  saveData(); renderTreffen();
+}
+
+// ============================================================
+// RENDER OVERALL
+// ============================================================
+
+function buildYearChart(year, treffen, members) {
+  const hist = historicalData[year];
+  const yTreffen = treffen
+    .sort((a,b)=>new Date(a.date)-new Date(b.date))
+    .filter(t => Object.values(t.attendance||{}).some(v=>v>0) || (t.ort && t.ort!=='-'));
+  if (!yTreffen.length) return '';
+
+  const W = 560, H = 180, PAD = {t:10,r:10,b:30,l:28};
+  const cW = W - PAD.l - PAD.r;
+  const cH = H - PAD.t - PAD.b;
+  const n = yTreffen.length;
+  const maxM = members.length;
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">`;
+  svg += `<rect width="${W}" height="${H}" fill="transparent"/>`;
+
+  // y-axis grid + labels
+  for (let v = 0; v <= maxM; v++) {
+    const yv = PAD.t + cH - (v/maxM)*cH;
+    svg += `<line x1="${PAD.l}" y1="${yv}" x2="${W-PAD.r}" y2="${yv}" stroke="rgba(46,41,37,0.7)" stroke-width="1"/>`;
+    svg += `<text x="${PAD.l-4}" y="${yv+4}" text-anchor="end" font-size="9" fill="#7a6f5e">${v}</text>`;
+  }
+  // x-axis month labels
+  const months = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  for (let mo = 0; mo < 12; mo++) {
+    const xPos = PAD.l + (mo/11)*cW;
+    svg += `<text x="${xPos}" y="${H-4}" text-anchor="middle" font-size="9" fill="#7a6f5e">${months[mo]}</text>`;
+  }
+
+  // Attendance count area + gold line
+  const areaPoints = yTreffen.map((t, i) => {
+    const cnt = members.filter(m => (t.attendance?.[m]||0) > 0).length;
+    const xFrac = n > 1 ? i/(n-1) : 0.5;
+    return { x: PAD.l + xFrac*cW, y: PAD.t + cH - (cnt/maxM)*cH, cnt };
+  });
+  const areaPath = `M ${areaPoints.map(p=>`${p.x},${p.y}`).join(' L ')} L ${PAD.l+cW},${PAD.t+cH} L ${PAD.l},${PAD.t+cH} Z`;
+  svg += `<path d="${areaPath}" fill="rgba(201,168,76,0.08)"/>`;
+  svg += `<polyline points="${areaPoints.map(p=>`${p.x},${p.y}`).join(' ')}" fill="none" stroke="#c9a84c" stroke-width="2.5"/>`;
+
+  // Dots with tooltip title
+  areaPoints.forEach((p, i) => {
+    const t = yTreffen[i];
+    const dateStr = new Date(t.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#c9a84c" stroke="#0e0c0a" stroke-width="1.5">
+      <title>${dateStr} — ${p.cnt} von ${maxM} Mitgliedern</title>
+    </circle>`;
+  });
+
+  svg += `</svg>`;
+
+  // Legend
+  const legend = members.map(m => {
+    const attended = yTreffen.filter(t => (t.attendance?.[m]||0) > 0).length;
+    return `<span style="display:inline-flex;align-items:center;gap:0.3rem;margin-right:0.75rem;font-size:0.75rem;color:var(--muted)">
+      <span style="width:12px;height:12px;border-radius:50%;background:${memberColors[m]||'#888'};display:inline-block;opacity:0.8"></span>
+      ${m} <span style="color:var(--gold2)">${attended}×</span>
+    </span>`;
+  }).join('');
+
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-top:1.5rem">
+    <h2 class="section-title" style="margin-bottom:1rem">📈 Jahresverlauf ${year}</h2>
+    ${svg}
+    <div style="margin-top:0.75rem;display:flex;flex-wrap:wrap;gap:0.25rem">
+      <span style="display:inline-flex;align-items:center;gap:0.3rem;margin-right:0.75rem;font-size:0.75rem;color:var(--gold2);font-weight:500">
+        <span style="width:14px;height:3px;background:#c9a84c;border-radius:2px;display:inline-block"></span>Gesamt anwesend
+      </span>
+      ${legend}
+    </div>
+  </div>`;
+}
+
+function renderOverall() {
+  const years = [2023,2024,2025,2026];
+  const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
+
+  // Compute totals per member across all years
+  const grandTotals = {};
+  members.forEach(m => {
+    grandTotals[m] = years.reduce((sum, y) => {
+      const hist = historicalData[y];
+      return sum + (hist ? (hist.totals[m]||0) : 0);
+    }, 0);
+  });
+  const sortedMembers = [...members].sort((a,b) => grandTotals[b] - grandTotals[a]);
+
+  // Big comparison table
+  const tableRows = sortedMembers.map((m, rank) => {
+    const cells = years.map(y => {
+      const hist = historicalData[y];
+      const maxP = hist ? hist.maxPossible : 50;
+      const pts = hist ? (hist.totals[m]||0) : 0;
+      const pct = (pts/maxP*100).toFixed(0);
+      return `<td>${pts} <span style="color:var(--muted);font-size:0.8rem">(${pct}%)</span></td>`;
+    }).join('');
+    const total = grandTotals[m];
+    const rankBadge = rank < 3
+      ? `<span class="rank-badge rank-${rank+1}" style="margin-right:0.5rem">${rank+1}</span>`
+      : `<span class="rank-badge rank-other" style="margin-right:0.5rem">${rank+1}</span>`;
+    return `<tr>
+      <td style="font-weight:600;color:var(--text);white-space:nowrap">${rankBadge}${m}</td>
+      ${cells}
+      <td style="font-weight:700;color:var(--gold2);white-space:nowrap">${total} <span style="color:var(--muted);font-size:0.8rem">Pkt.</span></td>
+    </tr>`;
+  }).join('');
+
+  // Podium per year
+  const podiums = years.map(y => {
+    const hist = historicalData[y];
+    if (!hist) return '';
+    const ranked = Object.entries(hist.totals).sort((a,b)=>b[1]-a[1]);
+    const items = ranked.slice(0,3).map(([name,pts],i) => `
+      <div class="podium-item">
+        <span class="rank-badge rank-${i+1}" style="min-width:28px">${i+1}</span>
+        <span class="name">${name}</span>
+        <span class="pts">${pts}</span>
+      </div>`).join('');
+    return `<div class="year-card"><h3>🏆 ${y}</h3>${items}</div>`;
+  }).join('');
+
+  // Overall location stats across all years
+  const allLocs = {};
+  years.forEach(y => {
+    const hist = historicalData[y];
+    if (!hist) return;
+    hist.treffen.forEach(t => {
+      if (!t.ort || t.ort === '-') return;
+      t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(loc => {
+        const l = loc.trim();
+        if (l) allLocs[l] = (allLocs[l]||0) + 1;
+      });
+    });
+  });
+  // also custom treffen
+  appData.treffen.forEach(t => {
+    if (!t.ort || t.ort === '-') return;
+    t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(loc => {
+      const l = loc.trim();
+      if (l) allLocs[l] = (allLocs[l]||0) + 1;
+    });
+  });
+  const sortedLocs = Object.entries(allLocs).sort((a,b)=>b[1]-a[1]);
+  const maxLocCount = sortedLocs[0]?.[1] || 1;
+  const locRows = sortedLocs.map(([loc, cnt], i) => `
+    <tr>
+      <td><span class="rank-badge rank-${i<3?i+1:'other'}" style="min-width:24px;width:24px;height:24px;font-size:0.75rem">${i+1}</span></td>
+      <td style="font-weight:500">${loc}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <div class="bar-bg" style="flex:1"><div class="bar-fill" style="width:${(cnt/maxLocCount*100).toFixed(0)}%"></div></div>
+          <span style="color:var(--gold2);font-weight:500;min-width:30px;text-align:right">${cnt}×</span>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  // Chart data: per-treffen attendance over time (all years combined)
+  // Each point = one treffen, x=date, y=number of members present
+  const allTreffenSorted = [];
+  years.forEach(y => {
+    const hist = historicalData[y];
+    if (hist) hist.treffen.forEach(t => allTreffenSorted.push(t));
+  });
+  appData.treffen.forEach(t => {
+    if (!allTreffenSorted.find(x => x.date === t.date)) allTreffenSorted.push(t);
+  });
+  allTreffenSorted.sort((a,b) => new Date(a.date)-new Date(b.date));
+
+  // Build SVG chart per year — attendance line per member
+  document.getElementById('overallContent').innerHTML = `
+    <h2 class="section-title">Gesamtübersicht (nach Gesamtteilnahmen sortiert)</h2>
+    <div style="overflow-x:auto;margin-bottom:2rem">
+    <table class="ranking-table">
+      <thead><tr><th>Mitglied</th>${years.map(y=>`<th>${y}</th>`).join('')}<th style="color:var(--gold)">Gesamt</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table></div>
+
+    <h2 class="section-title">Jahressieger</h2>
+    <div class="overall-grid">${podiums}</div>
+
+    <h2 class="section-title">📍 Overall Locations (alle Jahre)</h2>
+    <div style="overflow-x:auto;margin-bottom:2rem">
+    <table class="ranking-table">
+      <thead><tr><th>#</th><th>Location</th><th>Besuche</th></tr></thead>
+      <tbody>${locRows}</tbody>
+    </table></div>
+  `;
+}
+
+// ============================================================
+// RENDER STATUTEN
+// ============================================================
+function renderStatuten() {
+  const statuten = appData.statuten;
+  document.getElementById('statutenContent').innerHTML = `
+    <div class="statuten-card">
+      <h3>Gültige Statuten des Stammtischs</h3>
+      <ul class="statut-list">
+        ${statuten.map((s,i)=>`<li><span class="statut-num">${i+1}</span><span>${s}</span></li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+function renderAdmin() {
+  if (!isAdmin) {
+    document.getElementById('page-admin').innerHTML = '<div style="padding:3rem;text-align:center;color:var(--muted)">Bitte zuerst anmelden.</div>';
+    return;
+  }
+  renderAttendanceGrid();
+  renderMemberList();
+  renderStatutenAdmin();
+  renderManageLists();
+  loadEditList();
+}
+
+function memberAttRow(m, prefix) {
+  const id = prefix + m.replace(/[^a-zA-Z]/g,'_');
+  return `<div class="member-row" style="flex-direction:column;align-items:stretch">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span class="mname">${m}</span>
+      <div class="attendance-btns">
+        <button class="att-btn" id="${id}-1"   onclick="setAttX('${prefix}','${m}',1)">✓ Da</button>
+        <button class="att-btn" id="${id}-05"  onclick="setAttX('${prefix}','${m}',0.5)">½</button>
+        <button class="att-btn" id="${id}-0"   onclick="setAttX('${prefix}','${m}',0)">✗ Weg</button>
+      </div>
+    </div>
+    <div class="absence-reason" id="${id}-reason">
+      <div class="reason-btns">
+        <button class="reason-btn" id="${id}-r-exc"    onclick="setReason('${prefix}','${m}','excused')">✓ Entschuldigt mit Begründung</button>
+        <button class="reason-btn" id="${id}-r-excno"  onclick="setReason('${prefix}','${m}','excused-no')">~ Entschuldigt ohne Begründung</button>
+        <button class="reason-btn" id="${id}-r-unexc"  onclick="setReason('${prefix}','${m}','unexcused')">✗ Unentschuldigt</button>
+      </div>
+      <input type="text" class="reason-input" id="${id}-r-text"
+        placeholder="Begründung eingeben..." oninput="updateExcuseText('${prefix}')">
+    </div>
+  </div>`;
+}
+
+function renderAttendanceGrid() {
+  const grid = document.getElementById('attendanceGrid');
+  if (!grid) return;
+  grid.innerHTML = appData.members.map(m => memberAttRow(m, 'att-')).join('');
+  appData.members.forEach(m => setAttX('att-', m, 0));
+}
+
+const tempAtt = {};
+const tempReasons = {};   // member -> 'excused'|'excused-no'|'unexcused'
+const editTempReasons = {};
+
+function getAttStore(prefix)    { return prefix.startsWith('e') ? editTempAtt   : tempAtt;     }
+function getReasonStore(prefix) { return prefix.startsWith('e') ? editTempReasons : tempReasons; }
+
+function setAttX(prefix, member, val) {
+  const store = getAttStore(prefix);
+  store[member] = val;
+  const id = prefix + member.replace(/[^a-zA-Z]/g,'_');
+  ['1','05','0'].forEach(v => {
+    const b = document.getElementById(`${id}-${v}`);
+    if (b) b.className = 'att-btn';
+  });
+  const key = val===1?'1':val===0.5?'05':'0';
+  const btn = document.getElementById(`${id}-${key}`);
+  if (btn) btn.classList.add(`selected-${key}`);
+  // Show/hide absence reason panel
+  const reasonEl = document.getElementById(`${id}-reason`);
+  if (reasonEl) {
+    if (val === 0) {
+      reasonEl.classList.add('open');
+    } else {
+      reasonEl.classList.remove('open');
+      // clear reason
+      const rstore = getReasonStore(prefix);
+      delete rstore[member];
+      clearReasonBtns(id);
+    }
+  }
+}
+
+// Keep old setAtt as alias for compatibility
+function setAtt(member, val) { setAttX('att-', member, val); }
+
+function setReason(prefix, member, reason) {
+  const rstore = getReasonStore(prefix);
+  rstore[member] = reason;
+  const id = prefix + member.replace(/[^a-zA-Z]/g,'_');
+  clearReasonBtns(id);
+  const cls = reason==='excused'?'sel-excused':reason==='excused-no'?'sel-excused-no':'sel-unexcused';
+  const btn = document.getElementById(`${id}-r-${reason==='excused'?'exc':reason==='excused-no'?'excno':'unexc'}`);
+  if (btn) btn.classList.add(cls);
+  // Show text input only for "excused with reason"
+  const textEl = document.getElementById(`${id}-r-text`);
+  if (textEl) {
+    if (reason === 'excused') { textEl.classList.add('open'); textEl.focus(); }
+    else { textEl.classList.remove('open'); textEl.value = ''; }
+  }
+  updateExcuseText(prefix);
+}
+
+function clearReasonBtns(id) {
+  ['exc','excno','unexc'].forEach(r => {
+    const b = document.getElementById(`${id}-r-${r}`);
+    if (b) b.className = 'reason-btn';
+  });
+}
+
+function updateExcuseText(prefix) {
+  // Auto-build the Entschuldigungen textarea from reason selections
+  const members = prefix.startsWith('e') ? 
+    (historicalData[parseInt(document.getElementById('editYear').value)]?.members || appData.members) :
+    appData.members;
+  const rstore = getReasonStore(prefix);
+  const excuseId = prefix.startsWith('e') ? 'editExcuse' : 'newExcuse';
+  const excuseEl = document.getElementById(excuseId);
+  if (!excuseEl) return;
+  // Only overwrite if all lines are auto-generated (don't destroy manual edits)
+  const lines = members
+    .filter(m => rstore[m])
+    .map(m => {
+      const id = prefix + m.replace(/[^a-zA-Z]/g,'_');
+      const textEl = document.getElementById(`${id}-r-text`);
+      const grund = textEl && textEl.value.trim() ? textEl.value.trim() : '';
+      if (rstore[m] === 'excused')    return `${m} hat sich entschuldigt mit der Begründung "${grund}"`;
+      if (rstore[m] === 'excused-no') return `${m} hat sich entschuldigt aber ohne Begründung`;
+      if (rstore[m] === 'unexcused')  return `${m} hat sich nicht entschuldigt und somit auch keine Begründung abgegeben`;
+      return '';
+    }).filter(Boolean);
+  excuseEl.value = lines.join('\n');
+}
+
+function saveTreffen() {
+  const date = document.getElementById('newDate').value;
+  const ort = document.getElementById('newOrt').value;
+  const guests = newGuestTags.length > 0 ? newGuestTags.join(', ') : (document.getElementById('guestInput').value || '-');
+  const excuse = document.getElementById('newExcuse').value;
+  const note = document.getElementById('newBemerkung').value;
+  if (!date) { showMsg('Bitte Datum eingeben.', false); return; }
+  appData.members.forEach(m => { if (tempAtt[m] === undefined) tempAtt[m] = 0; });
+  appData.treffen.push({date, ort: ort||'-', guests, attendance: {...tempAtt}, excuse, note});
+  saveData();
+  showMsg('Treffen gespeichert! ✓', true);
+  document.getElementById('newDate').value = '';
+  document.getElementById('newOrt').value = '';
+  document.getElementById('guestInput').value = '';
+  newGuestTags.length = 0;
+  renderTags('guest');
+  document.getElementById('newExcuse').value = '';
+  document.getElementById('newBemerkung').value = '';
+  renderAttendanceGrid();
+}
+
+function showMsg(msg, ok) {
+  const el = document.getElementById('adminMsg');
+  el.innerHTML = `<div class="alert ${ok?'alert-success':'alert-error'}">${msg}</div>`;
+  setTimeout(() => el.innerHTML = '', 3000);
+}
+
+function renderMemberList() {
+  const el = document.getElementById('memberList');
+  if (!el) return;
+  el.innerHTML = appData.members.map((m,i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+      <span>${m}</span>
+      <button class="btn-danger" onclick="removeMember(${i})">Entfernen</button>
+    </div>`).join('');
+}
+
+function addMember() {
+  const inp = document.getElementById('newMemberName');
+  const name = inp.value.trim();
+  if (!name || appData.members.includes(name)) return;
+  appData.members.push(name);
+  saveData(); inp.value = '';
+  renderMemberList(); renderAttendanceGrid();
+}
+
+function removeMember(i) {
+  appData.members.splice(i, 1);
+  saveData(); renderMemberList(); renderAttendanceGrid();
+}
+
+function renderStatutenAdmin() {
+  const el = document.getElementById('statutenAdmin');
+  if (!el) return;
+  el.innerHTML = appData.statuten.map((s,i) => `
+    <div style="padding:0.6rem 0;border-bottom:1px solid var(--border)" id="statut-row-${i}">
+      <div style="display:flex;gap:0.75rem;align-items:flex-start">
+        <span style="color:var(--gold);font-weight:700;min-width:20px;padding-top:0.1rem">${i+1}</span>
+        <span style="flex:1;font-size:0.9rem" id="statut-text-${i}">${s}</span>
+        <div style="display:flex;gap:0.3rem;flex-shrink:0">
+          <button class="att-btn" style="color:var(--gold);border-color:rgba(201,168,76,0.3);font-size:0.75rem;padding:0.2rem 0.5rem"
+            onclick="editStatut(${i})">✏</button>
+          <button class="btn-danger" style="padding:0.3rem 0.5rem;font-size:0.8rem" onclick="removeStatut(${i})">×</button>
+        </div>
+      </div>
+      <div id="statut-edit-${i}" style="display:none;margin-top:0.5rem;margin-left:28px">
+        <textarea id="statut-input-${i}" style="width:100%;min-height:80px;font-size:0.88rem;margin-bottom:0.4rem">${s}</textarea>
+        <div style="display:flex;gap:0.5rem">
+          <button class="btn-primary" style="padding:0.4rem 1rem;font-size:0.85rem" onclick="saveStatut(${i})">Speichern</button>
+          <button class="btn-ghost" style="padding:0.4rem 0.75rem;font-size:0.85rem" onclick="cancelStatutEdit(${i})">Abbrechen</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function editStatut(i) {
+  // Close any other open editors first
+  appData.statuten.forEach((_,j) => { if (j!==i) cancelStatutEdit(j); });
+  document.getElementById(`statut-edit-${i}`).style.display = 'block';
+  document.getElementById(`statut-text-${i}`).style.display = 'none';
+  document.getElementById(`statut-input-${i}`).focus();
+}
+
+function saveStatut(i) {
+  const val = document.getElementById(`statut-input-${i}`).value.trim();
+  if (!val) return;
+  appData.statuten[i] = val;
+  saveData();
+  renderStatutenAdmin();
+  renderStatuten();
+}
+
+function cancelStatutEdit(i) {
+  const editEl = document.getElementById(`statut-edit-${i}`);
+  const textEl = document.getElementById(`statut-text-${i}`);
+  if (editEl) editEl.style.display = 'none';
+  if (textEl) textEl.style.display = '';
+}
+
+function addStatut() {
+  const inp = document.getElementById('newStatut');
+  const s = inp.value.trim();
+  if (!s) return;
+  appData.statuten.push(s);
+  saveData(); inp.value = '';
+  renderStatutenAdmin(); renderStatuten();
+}
+
+function removeStatut(i) {
+  appData.statuten.splice(i,1);
+  saveData(); renderStatutenAdmin(); renderStatuten();
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+function openLogin() { document.getElementById('loginModal').classList.add('open'); document.getElementById('pwInput').value = ''; document.getElementById('loginError').style.display='none'; }
+function closeLogin() { document.getElementById('loginModal').classList.remove('open'); }
+function doLogin() {
+  const pw = document.getElementById('pwInput').value;
+  if (pw === ADMIN_PW) {
+    isAdmin = true;
+    document.getElementById('adminBadge').style.display = 'inline';
+    document.getElementById('loginBtn').textContent = 'Abmelden';
+    document.getElementById('loginBtn').onclick = doLogout;
+    document.getElementById('adminNavBtn').style.display = '';
+    closeLogin();
+    renderAdmin();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+function doLogout() {
+  isAdmin = false;
+  document.getElementById('adminBadge').style.display = 'none';
+  document.getElementById('loginBtn').textContent = 'Anmelden';
+  document.getElementById('loginBtn').onclick = openLogin;
+  document.getElementById('adminNavBtn').style.display = 'none';
+  showPage('dashboard');
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => { if (b.textContent.toLowerCase().includes(id.substring(0,4))) b.classList.add('active'); });
+  if (id==='dashboard') renderDashboard();
+  if (id==='treffen') renderTreffen();
+  if (id==='overall') renderOverall();
+  if (id==='statuten') renderStatuten();
+  if (id==='admin') renderAdmin();
+}
+
+// ============================================================
+// COMBO DROPDOWNS (Ort + Gäste)
+// ============================================================
+const defaultLocations = ["Anker", "Christoph", "Klaas", "André", "Fabian", "Alte Post", "Castell", "Wunderlich", "Jan", "Dannemann", "Patrick", "Bilzhütte und Skihütte Oberkochen", "Aposto", "Gartenfreunde", "Hobel"];
+const defaultGuests = ["Alexander", "Dominik", "Timo", "Klaas", "Simon", "Giuseppe", "Tobias", "Frank", "Sascha", "Dean", "Konstantin", "Ulrich"];
+
+function getLocations() { return JSON.parse(localStorage.getItem('st_locations') || 'null') || [...defaultLocations]; }
+function getGuests()    { return JSON.parse(localStorage.getItem('st_guests')    || 'null') || [...defaultGuests]; }
+function saveLocations(arr) { localStorage.setItem('st_locations', JSON.stringify(arr)); }
+function saveGuestsDB(arr)  { localStorage.setItem('st_guests',    JSON.stringify(arr)); }
+
+// Track guest tags for new + edit forms
+let newGuestTags = [];
+let editGuestTags = [];
+
+function getTagsFor(key) { return key.startsWith('edit') ? editGuestTags : newGuestTags; }
+function getTagsElId(key) { return key.startsWith('edit') ? 'editGuestTags' : 'guestTags'; }
+
+function renderTags(key) {
+  const tags = getTagsFor(key);
+  const el = document.getElementById(getTagsElId(key));
+  if (!el) return;
+  el.innerHTML = tags.map((g,i) =>
+    `<span class="tag">${g}<button onclick="removeTag('${key}',${i})">×</button></span>`
+  ).join('');
+}
+function removeTag(key, i) {
+  getTagsFor(key).splice(i, 1);
+  renderTags(key);
+}
+
+function getComboConfig(key) {
+  if (key === 'ort')      return { inputId:'newOrt',      dropId:'ortDropdown',       items:getLocations(), isGuest:false };
+  if (key === 'guest')    return { inputId:'guestInput',  dropId:'guestDropdown',     items:getGuests(),    isGuest:true  };
+  if (key === 'editOrt')  return { inputId:'editOrt',     dropId:'editOrtDropdown',   items:getLocations(), isGuest:false };
+  if (key === 'editGuest')return { inputId:'editGuestInput',dropId:'editGuestDropdown',items:getGuests(),   isGuest:true  };
+}
+
+function renderComboDropdown(key, filter='') {
+  const cfg = getComboConfig(key);
+  const drop = document.getElementById(cfg.dropId);
+  if (!drop) return;
+  const f = filter.toLowerCase();
+  const filtered = cfg.items.filter(i => i.toLowerCase().includes(f));
+  drop.innerHTML = filtered.map(item => `
+    <div class="combo-option" onmousedown="selectComboItem(event,'${key}','${item.replace(/'/g,"\'")}')">
+      <span>${item}</span>
+      <button class="del-opt" onmousedown="deleteComboItem(event,'${key}','${item.replace(/'/g,"\'")}')">✕</button>
+    </div>`).join('') +
+    (filter && !cfg.items.includes(filter) ? `<div class="combo-option" style="color:var(--gold)" onmousedown="addComboItem(event,'${key}','${filter.replace(/'/g,"\'")}')">＋ „${filter}" hinzufügen</div>` : '');
+  drop.classList.toggle('open', filtered.length > 0 || (!!filter && !cfg.items.includes(filter)));
+}
+
+function openCombo(key) { filterCombo(key); }
+function filterCombo(key) {
+  const cfg = getComboConfig(key);
+  const val = document.getElementById(cfg.inputId).value;
+  renderComboDropdown(key, val);
+}
+
+function closeAllCombos() {
+  ['ortDropdown','guestDropdown','editOrtDropdown','editGuestDropdown']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('open'); });
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.combo-wrap')) closeAllCombos();
+});
+
+function selectComboItem(e, key, item) {
+  e.preventDefault();
+  const cfg = getComboConfig(key);
+  if (cfg.isGuest) {
+    const tags = getTagsFor(key);
+    if (!tags.includes(item)) { tags.push(item); renderTags(key); }
+    document.getElementById(cfg.inputId).value = '';
+  } else {
+    document.getElementById(cfg.inputId).value = item;
+  }
+  closeAllCombos();
+}
+
+function addComboItem(e, key, item) {
+  e.preventDefault();
+  const cfg = getComboConfig(key);
+  if (cfg.isGuest) {
+    const guests = getGuests();
+    if (!guests.includes(item)) { guests.push(item); saveGuestsDB(guests); }
+    const tags = getTagsFor(key);
+    if (!tags.includes(item)) { tags.push(item); renderTags(key); }
+    document.getElementById(cfg.inputId).value = '';
+  } else {
+    const locs = getLocations();
+    if (!locs.includes(item)) { locs.push(item); saveLocations(locs); }
+    document.getElementById(cfg.inputId).value = item;
+  }
+  closeAllCombos();
+}
+
+function deleteComboItem(e, key, item) {
+  e.preventDefault(); e.stopPropagation();
+  const cfg = getComboConfig(key);
+  if (cfg.isGuest) {
+    const guests = getGuests().filter(g => g !== item);
+    saveGuestsDB(guests);
+  } else {
+    const locs = getLocations().filter(l => l !== item);
+    saveLocations(locs);
+  }
+  filterCombo(key);
+}
+
+function comboKey(e, key) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const cfg = getComboConfig(key);
+    const val = document.getElementById(cfg.inputId).value.trim();
+    if (!val) return;
+    if (cfg.isGuest) {
+      const tags = getTagsFor(key);
+      if (!tags.includes(val)) { tags.push(val); renderTags(key); }
+      // add to DB if new
+      const guests = getGuests();
+      if (!guests.includes(val)) { guests.push(val); saveGuestsDB(guests); }
+      document.getElementById(cfg.inputId).value = '';
+    }
+    closeAllCombos();
+  } else if (e.key === 'Escape') {
+    closeAllCombos();
+  }
+}
+
+// Patch saveTreffen to read guest tags
+const _origSaveTreffen = saveTreffen;
+
+// ============================================================
+// MANAGE LOCATIONS & GUESTS
+// ============================================================
+let renameCtx = null; // {type:'loc'|'guest', oldVal}
+
+function renderManageLists() {
+  renderManageList('loc');
+  renderManageList('guest');
+}
+
+function renderManageList(type) {
+  const items = type === 'loc' ? getLocations() : getGuests();
+  const elId = type === 'loc' ? 'manageLocList' : 'manageGuestList';
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = items.map((item, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0.5rem;margin-bottom:0.25rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:0.85rem">
+      <span>${item}</span>
+      <div style="display:flex;gap:0.3rem">
+        <button class="att-btn" style="font-size:0.75rem;padding:0.2rem 0.5rem;color:var(--gold);border-color:rgba(201,168,76,0.3)"
+          onclick="openRenamePanel('${type}','${item.replace(/'/g,"\\'")}')">✏</button>
+        <button class="att-btn" style="font-size:0.75rem;padding:0.2rem 0.5rem;color:var(--danger);border-color:rgba(201,99,99,0.3)"
+          onclick="deleteManageItem('${type}','${item.replace(/'/g,"\\'")}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function addNewLoc() {
+  const inp = document.getElementById('newLocInput');
+  const val = inp.value.trim();
+  if (!val) return;
+  const locs = getLocations();
+  if (!locs.includes(val)) { locs.push(val); saveLocations(locs); }
+  inp.value = '';
+  renderManageList('loc');
+}
+
+function addNewGuest() {
+  const inp = document.getElementById('newGuestManageInput');
+  const val = inp.value.trim();
+  if (!val) return;
+  const guests = getGuests();
+  if (!guests.includes(val)) { guests.push(val); saveGuestsDB(guests); }
+  inp.value = '';
+  renderManageList('guest');
+}
+
+function deleteManageItem(type, val) {
+  if (type === 'loc') {
+    saveLocations(getLocations().filter(l => l !== val));
+    renderManageList('loc');
+  } else {
+    saveGuestsDB(getGuests().filter(g => g !== val));
+    renderManageList('guest');
+  }
+  closeRenamePanel();
+}
+
+function openRenamePanel(type, oldVal) {
+  renameCtx = {type, oldVal};
+  document.getElementById('renamePanelTitle').textContent = type === 'loc' ? '📍 Location umbenennen' : '👥 Gast umbenennen';
+  document.getElementById('renameOldVal').textContent = oldVal;
+  document.getElementById('renameNewVal').value = oldVal;
+  document.getElementById('renamePanel').style.display = 'block';
+  document.getElementById('renameNewVal').focus();
+  document.getElementById('renameNewVal').select();
+}
+
+function closeRenamePanel() {
+  document.getElementById('renamePanel').style.display = 'none';
+  renameCtx = null;
+}
+
+function doRename() {
+  if (!renameCtx) return;
+  const {type, oldVal} = renameCtx;
+  const newVal = document.getElementById('renameNewVal').value.trim();
+  if (!newVal || newVal === oldVal) { closeRenamePanel(); return; }
+
+  if (type === 'loc') {
+    // Rename in default list
+    const locs = getLocations().map(l => l === oldVal ? newVal : l);
+    saveLocations(locs);
+    // Rename in all historical treffen (in-memory)
+    Object.values(historicalData).forEach(yr => {
+      yr.treffen.forEach(t => { if (t.ort === oldVal) t.ort = newVal; });
+    });
+    // Rename in custom treffen
+    appData.treffen.forEach(t => { if (t.ort === oldVal) t.ort = newVal; });
+    saveData();
+    renderManageList('loc');
+  } else {
+    // Rename in default guest list
+    const guests = getGuests().map(g => g === oldVal ? newVal : g);
+    saveGuestsDB(guests);
+    // Rename in all historical treffen guests field
+    const renameInGuests = gStr => {
+      if (!gStr || gStr === '-') return gStr;
+      return gStr.split(/,\s*|\s+\bund\b\s+/i).map(g => g.trim() === oldVal ? newVal : g.trim()).join(', ');
+    };
+    Object.values(historicalData).forEach(yr => {
+      yr.treffen.forEach(t => { t.guests = renameInGuests(t.guests); });
+    });
+    appData.treffen.forEach(t => { t.guests = renameInGuests(t.guests); });
+    saveData();
+    renderManageList('guest');
+  }
+
+  showMsg(`"${oldVal}" → "${newVal}" rückwirkend angepasst ✓`, true);
+  closeRenamePanel();
+}
+
+// ============================================================
+// EDIT TREFFEN
+// ============================================================
+let editingDate = null;
+let editTempAtt = {};
+
+function loadEditList() {
+  const year = parseInt(document.getElementById('editYear').value);
+  const hist = historicalData[year];
+  const allTreffen = [
+    ...(hist ? hist.treffen : []),
+    ...appData.treffen.filter(t => new Date(t.date).getFullYear() === year)
+  ].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  const el = document.getElementById('editTreffenList');
+  if (!allTreffen.length) { el.innerHTML = '<p style="color:var(--muted);font-size:0.9rem">Keine Treffen in diesem Jahr.</p>'; return; }
+
+  el.innerHTML = allTreffen.map(t => {
+    const ausgefallen = !t.ort || t.ort==='-' || Object.values(t.attendance).every(v=>v===0);
+    const dateStr = new Date(t.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.55rem 0.75rem;margin-bottom:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+      <div>
+        <span style="font-weight:500">${dateStr}</span>
+        <span style="color:var(--muted);font-size:0.85rem;margin-left:0.6rem">${ausgefallen ? '⚠ Ausgefallen' : '📍 ' + (t.ort||'-')}</span>
+      </div>
+      <button class="att-btn" style="color:var(--gold);border-color:rgba(201,168,76,0.3)" onclick="openEditForm('${t.date}')">✏ Bearbeiten</button>
+    </div>`;
+  }).join('');
+
+  closeEditForm();
+}
+
+function openEditForm(date) {
+  const year = parseInt(document.getElementById('editYear').value);
+  const hist = historicalData[year];
+  // find treffen: first check custom, then historical
+  let t = appData.treffen.find(x => x.date === date);
+  if (!t && hist) t = hist.treffen.find(x => x.date === date);
+  if (!t) return;
+
+  editingDate = date;
+  const dateStr = new Date(date).toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('editFormTitle').textContent = '✏ ' + dateStr;
+  document.getElementById('editOrt').value = t.ort === '-' ? '' : (t.ort||'');
+  // populate guest tags
+  editGuestTags.length = 0;
+  if (t.guests && t.guests !== '-') {
+    t.guests.split(/,\s*|\s+und\s+/i).forEach(g => { if(g.trim()) editGuestTags.push(g.trim()); });
+  }
+  renderTags('editGuest');
+  document.getElementById('editExcuse').value = t.excuse||'';
+  document.getElementById('editBemerkung').value = t.note||'';
+
+  // Build attendance grid for edit
+  const members = (hist ? hist.members : appData.members);
+  editTempAtt = {};
+  Object.assign(editTempAtt, t.attendance||{});
+  Object.keys(editTempReasons).forEach(k => delete editTempReasons[k]);
+  const grid = document.getElementById('editAttGrid');
+  grid.innerHTML = members.map(m => memberAttRow(m, 'eatt-')).join('');
+  members.forEach(m => setAttX('eatt-', m, editTempAtt[m] ?? 0));
+
+  document.getElementById('editForm').style.display = 'block';
+  document.getElementById('editForm').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+
+
+function saveEditTreffen() {
+  if (!editingDate) return;
+  const year = parseInt(document.getElementById('editYear').value);
+  const hist = historicalData[year];
+
+  const updated = {
+    date: editingDate,
+    ort: document.getElementById('editOrt').value || '-',
+    guests: editGuestTags.length > 0 ? editGuestTags.join(', ') : (document.getElementById('editGuestInput').value || '-'),
+    attendance: {...editTempAtt},
+    excuse: document.getElementById('editExcuse').value,
+    note: document.getElementById('editBemerkung').value,
+  };
+
+  // Check if it's a custom treffen
+  const customIdx = appData.treffen.findIndex(x => x.date === editingDate);
+  if (customIdx >= 0) {
+    appData.treffen[customIdx] = updated;
+  } else {
+    // It's a historical treffen — store as override in appData
+    // Remove any existing override, then push
+    appData.treffen = appData.treffen.filter(x => x.date !== editingDate);
+    appData.treffen.push(updated);
+    // Also patch the in-memory historical data so it shows immediately
+    if (hist) {
+      const histIdx = hist.treffen.findIndex(x => x.date === editingDate);
+      if (histIdx >= 0) hist.treffen[histIdx] = updated;
+    }
+  }
+
+  saveData();
+  showMsg('Treffen aktualisiert! ✓', true);
+  loadEditList();
+  closeEditForm();
+}
+
+function closeEditForm() {
+  document.getElementById('editForm').style.display = 'none';
+  editingDate = null;
+}
+
+// INIT
+renderDashboard();
+renderStatuten();
+</script>
+</body>
+</html>
