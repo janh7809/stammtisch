@@ -28,11 +28,30 @@
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
     min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
     background-image: radial-gradient(ellipse at 20% 20%, rgba(154,111,30,0.06) 0%, transparent 60%),
                       radial-gradient(ellipse at 80% 80%, rgba(196,94,26,0.06) 0%, transparent 60%);
   }
 
   /* NAV */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: var(--surface); border-top: 2px solid var(--border);
+    display: flex; height: 62px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+  }
+  .bnav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; background: none; border: none;
+    color: var(--muted); cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s; padding: 6px 4px;
+  }
+  .bnav-btn.active { color: var(--gold); background: rgba(154,111,30,0.07); }
+  .bnav-btn:hover { color: var(--gold); }
+  .bnav-icon { font-size: 1.35rem; line-height: 1; }
+  .bnav-label { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.03em; }
+  .page { padding-bottom: 80px; padding-left: 1rem; padding-right: 1rem; max-width: 100%; }
+  @media (min-width: 700px) { .page { padding-left: 2rem; padding-right: 2rem; } }
   nav {
     position: sticky; top: 0; z-index: 100;
     background: rgba(245,240,232,0.95);
@@ -72,12 +91,12 @@
   #loginBtn:hover { background: rgba(201,168,76,0.2); }
 
   /* PAGES */
-  .page { display: none; padding: 2rem; max-width: 1200px; margin: 0 auto; }
+  .page { display: none; max-width: 1200px; margin: 0 auto; }
   .page.active { display: block; }
 
   /* HERO */
   .hero {
-    text-align: center; padding: 3rem 0 2rem;
+    text-align: center; padding: 1.5rem 0 1rem;
     border-bottom: 1px solid var(--border); margin-bottom: 2.5rem;
   }
   .hero h1 {
@@ -105,7 +124,7 @@
 
   /* STATS GRID */
   .stats-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem;
     margin-bottom: 2rem;
   }
   .stat-card {
@@ -233,7 +252,8 @@
   }
   input:focus, textarea:focus, select:focus { outline: none; border-color: var(--gold); }
   textarea { resize: vertical; min-height: 80px; }
-  .attendance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
+  .attendance-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+  @media (min-width: 500px) { .attendance-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
   .member-row {
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: 8px; padding: 0.75rem; display: flex; align-items: center; justify-content: space-between;
@@ -334,7 +354,7 @@
   .statuten-collapse summary::-webkit-details-marker { display: none; }
   .statuten-collapse[open] summary { border-bottom: 1px solid var(--border); }
   .statuten-collapse .statut-list { padding: 0.25rem 1.25rem 0.75rem; }
-  .extra-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .extra-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
   .extra-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
   .extra-card .ec-title { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
   .extra-card .ec-winner { font-size: 1.05rem; font-weight: 600; color: var(--gold2); margin-bottom: 0.25rem; }
@@ -347,17 +367,26 @@
 
 <nav>
   <div class="nav-brand">🍺 Stammtisch<span>Statistik & Archiv</span></div>
-  <div class="nav-links">
-    <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
-    <button class="nav-btn" onclick="showPage('treffen')">Treffen</button>
-    <button class="nav-btn" onclick="showPage('overall')">Overall</button>
-    <button class="nav-btn" id="adminNavBtn" onclick="showPage('admin')" style="display:none">Admin</button>
-  </div>
   <div class="nav-right">
     <span id="adminBadge">👑 Admin</span>
     <button id="loginBtn" onclick="openLogin()">Anmelden</button>
   </div>
 </nav>
+<!-- BOTTOM NAV (mobile-first) -->
+<div class="bottom-nav">
+  <button class="bnav-btn active" id="bnav-dashboard" onclick="showPage('dashboard')">
+    <span class="bnav-icon">📊</span><span class="bnav-label">Dashboard</span>
+  </button>
+  <button class="bnav-btn" id="bnav-treffen" onclick="showPage('treffen')">
+    <span class="bnav-icon">📅</span><span class="bnav-label">Treffen</span>
+  </button>
+  <button class="bnav-btn" id="bnav-overall" onclick="showPage('overall')">
+    <span class="bnav-icon">🏆</span><span class="bnav-label">Overall</span>
+  </button>
+  <button class="bnav-btn" id="bnav-admin" onclick="showPage('admin')" style="display:none">
+    <span class="bnav-icon">⚙️</span><span class="bnav-label">Admin</span>
+  </button>
+</div>
 
 <div id="loadingBanner" style="display:none;position:fixed;top:64px;left:0;right:0;z-index:50;background:rgba(201,168,76,0.12);border-bottom:1px solid rgba(201,168,76,0.3);padding:0.6rem 1.5rem;align-items:center;justify-content:center;gap:0.75rem">
   <div style="width:16px;height:16px;border:2px solid var(--gold);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
@@ -893,10 +922,29 @@ function saveData() {
 }
 
 async function saveTreffenToSupabase(t) {
-  return sbUpsert('treffen', {
-    date: t.date, ort: t.ort, guests: t.guests,
-    attendance: t.attendance, excuse: t.excuse, note: t.note
+  const payload = {
+    date: t.date,
+    ort: t.ort || '-',
+    guests: t.guests || '-',
+    attendance: t.attendance || {},
+    excuse: t.excuse || '',
+    note: t.note || ''
+  };
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/treffen`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify(payload)
   });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('Supabase save error:', err);
+    throw new Error(err);
+  }
+  return true;
 }
 
 async function deleteTreffenFromSupabase(date) {
@@ -1184,7 +1232,7 @@ function renderTreffen() {
       <div class="attendance-dots">${dots}</div>
       <div class="treffen-detail" id="detail-${currentTreffenYear}-${idx}">
         ${t.guests && t.guests !== '-' ? `<div class="detail-row"><strong>Gäste:</strong><p>${t.guests}</p></div>` : ''}
-        ${t.excuse ? `<div class="detail-row"><strong>Entschuldigungen:</strong><p>${t.excuse}</p></div>` : ''}
+        ${t.excuse ? `<div class="detail-row"><strong>Entschuldigungen:</strong><div style="margin-top:0.4rem">${t.excuse.split(/\\n|·/).map(s=>s.trim()).filter(Boolean).map(s=>`<div style="padding:0.2rem 0;border-bottom:1px solid var(--border);font-size:0.88rem">${s}</div>`).join('')}</div></div>` : ''}
         ${t.note ? `<div class="detail-row"><strong>Bemerkungen:</strong><p>${t.note}</p></div>` : ''}
         ${!t.guests && !t.excuse && !t.note ? '<p style="color:var(--muted);font-size:0.85rem">Keine weiteren Details.</p>' : ''}
         ${isAdmin ? `<div style="margin-top:0.75rem"><button class="btn-danger" onclick="deleteTreffen('${t.date}',event)">Löschen</button></div>` : ''}
@@ -1551,11 +1599,25 @@ function saveTreffen() {
   const note = document.getElementById('newBemerkung').value;
   if (!date) { showMsg('Bitte Datum eingeben.', false); return; }
   appData.members.forEach(m => { if (tempAtt[m] === undefined) tempAtt[m] = 0; });
+  // Validate: every absent member must have a reason selected
+  const missingReason = appData.members.filter(m => (tempAtt[m]||0) === 0 && !tempReasons[m]);
+  if (missingReason.length > 0) {
+    showMsg(`Bitte Abwesenheitsgrund wählen für: ${missingReason.join(', ')}`, false);
+    // Highlight missing
+    missingReason.forEach(m => {
+      const id = 'att-' + m.replace(/[^a-zA-Z]/g,'_');
+      const el = document.getElementById(id + '-reason');
+      if (el) { el.style.border = '1px solid var(--danger)'; setTimeout(() => el.style.border = '', 3000); }
+    });
+    return;
+  }
   const newT = {date, ort: ort||'-', guests, attendance: {...tempAtt}, excuse, note};
   appData.treffen = appData.treffen.filter(t => t.date !== date);
   appData.treffen.push(newT);
   saveData();
-  saveTreffenToSupabase(newT).then(() => showMsg('Treffen gespeichert! ✓', true)).catch(() => showMsg('Treffen gespeichert! ✓', true));
+  saveTreffenToSupabase(newT)
+    .then(() => showMsg('✅ Treffen vom ' + new Date(date).toLocaleDateString('de-DE') + ' erfolgreich gespeichert!', true))
+    .catch(() => showMsg('⚠️ Lokal gespeichert, Datenbankfehler — bitte prüfen.', false));
   document.getElementById('newDate').value = '';
   document.getElementById('newOrt').value = '';
   document.getElementById('guestInput').value = '';
@@ -1670,7 +1732,7 @@ function doLogin() {
     document.getElementById('adminBadge').style.display = 'inline';
     document.getElementById('loginBtn').textContent = 'Abmelden';
     document.getElementById('loginBtn').onclick = doLogout;
-    document.getElementById('adminNavBtn').style.display = '';
+    document.getElementById('bnav-admin').style.display = '';
     closeLogin();
     renderAdmin();
   } else {
@@ -1691,9 +1753,11 @@ function doLogout() {
 // ============================================================
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b => { if (b.textContent.toLowerCase().includes(id.substring(0,4))) b.classList.add('active'); });
+  const bnav = document.getElementById('bnav-'+id);
+  if (bnav) bnav.classList.add('active');
+  window.scrollTo(0, 0);
   if (id==='dashboard') renderDashboard();
   if (id==='treffen') renderTreffen();
   if (id==='overall') renderOverall();
