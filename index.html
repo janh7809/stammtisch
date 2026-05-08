@@ -937,13 +937,12 @@ async function saveTreffenToSupabase(t) {
     excuse: t.excuse || '',
     note: t.note || ''
   };
+  // First delete existing row with same date, then insert fresh
+  await sbDelete('treffen', `date=eq.${encodeURIComponent(t.date)}`);
   const res = await fetch(`${SUPABASE_URL}/rest/v1/treffen`, {
     method: 'POST',
-    headers: {
-      apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates,return=minimal'
-    },
+    mode: 'cors',
+    headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
     body: JSON.stringify(payload)
   });
   if (!res.ok) {
@@ -1441,11 +1440,36 @@ function renderOverall() {
   // Build SVG chart per year — attendance line per member
   document.getElementById('overallContent').innerHTML = `
     <h2 class="section-title">Gesamtübersicht (nach Gesamtteilnahmen sortiert)</h2>
-    <div style="overflow-x:auto;margin-bottom:2rem;-webkit-overflow-scrolling:touch">
-    <table class="ranking-table" style="font-size:0.82rem;min-width:340px">
-      <thead><tr><th>Mitglied</th>${years.map(y=>`<th style="white-space:nowrap">${y}</th>`).join('')}<th style="color:var(--gold)">∑</th></tr></thead>
-      <tbody>${tableRows}</tbody>
-    </table></div>
+    <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:2rem">
+      ${sortedMembers.map((m,rank) => {
+        const total = grandTotals[m];
+        const maxTotal = grandTotals[sortedMembers[0]] || 1;
+        const rankBadge = rank < 3
+          ? `<span class="rank-badge rank-${rank+1}" style="width:28px;height:28px;font-size:0.8rem;flex-shrink:0">${rank+1}</span>`
+          : `<span class="rank-badge rank-other" style="width:28px;height:28px;font-size:0.8rem;flex-shrink:0">${rank+1}</span>`;
+        const yearCells = years.map(y => {
+          const hist = historicalData[y];
+          const pts = hist ? (hist.totals[m]||0) : 0;
+          const maxP = hist ? hist.maxPossible : 50;
+          const pct = (pts/maxP*100).toFixed(0);
+          return `<div style="text-align:center;min-width:48px">
+            <div style="font-size:0.75rem;color:var(--muted)">${y}</div>
+            <div style="font-weight:600;font-size:0.88rem">${pts}</div>
+            <div style="font-size:0.7rem;color:var(--muted)">${pct}%</div>
+          </div>`;
+        }).join('');
+        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0.85rem 1rem">
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem">
+            ${rankBadge}
+            <span style="font-weight:700;font-size:1rem;flex:1">${m}</span>
+            <span style="font-size:1.1rem;font-weight:800;color:var(--gold)">${total}</span>
+            <span style="font-size:0.75rem;color:var(--muted);margin-left:2px">Pkt.</span>
+          </div>
+          <div class="bar-bg" style="margin-bottom:0.6rem"><div class="bar-fill" style="width:${(total/maxTotal*100).toFixed(0)}%"></div></div>
+          <div style="display:flex;gap:0.5rem;justify-content:space-between">${yearCells}</div>
+        </div>`;
+      }).join('')}
+    </div>
 
     <h2 class="section-title">Jahressieger</h2>
     <div class="overall-grid">${podiums}</div>
@@ -2114,8 +2138,15 @@ function saveEditTreffen() {
   appData.treffen.push(updated);
 
   saveData();
-  saveTreffenToSupabase(updated).then(() => showMsg('Treffen aktualisiert! ✓', true)).catch(() => showMsg('Treffen aktualisiert! ✓', true));
-  loadEditList();
+  saveTreffenToSupabase(updated)
+    .then(() => {
+      showMsg('✅ Treffen vom ' + new Date(updated.date).toLocaleDateString('de-DE') + ' aktualisiert!', true);
+      loadEditList();
+    })
+    .catch(err => {
+      showMsg('⚠️ Fehler beim Speichern: ' + err.message, false);
+      loadEditList();
+    });
   closeEditForm();
 }
 
