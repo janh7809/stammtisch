@@ -7,16 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f5f0e8;
+    --bg: #eef2f8;
     --surface: #ffffff;
-    --surface2: #f0ebe0;
-    --border: #ddd5c4;
-    --gold: #9a6f1e;
-    --gold2: #7a5510;
-    --amber: #c45e1a;
-    --text: #2a2118;
-    --muted: #8a7a65;
-    --success: #2d7a40;
+    --surface2: #e4eaf4;
+    --border: #c8d4e8;
+    --gold: #2a5fa8;
+    --gold2: #1a3f7a;
+    --amber: #3a7abd;
+    --text: #1a2540;
+    --muted: #6a7a96;
+    --success: #2a7a48;
     --danger: #b03030;
     --radius: 12px;
   }
@@ -29,8 +29,8 @@
     font-family: 'DM Sans', sans-serif;
     min-height: 100vh;
     -webkit-text-size-adjust: 100%;
-    background-image: radial-gradient(ellipse at 20% 20%, rgba(154,111,30,0.06) 0%, transparent 60%),
-                      radial-gradient(ellipse at 80% 80%, rgba(196,94,26,0.06) 0%, transparent 60%);
+    background-image: radial-gradient(ellipse at 20% 20%, rgba(42,95,168,0.07) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 80%, rgba(58,122,189,0.05) 0%, transparent 60%);
   }
 
   /* NAV */
@@ -46,7 +46,7 @@
     color: var(--muted); cursor: pointer; font-family: 'DM Sans', sans-serif;
     transition: all 0.2s; padding: 6px 4px;
   }
-  .bnav-btn.active { color: var(--gold); background: rgba(154,111,30,0.07); }
+  .bnav-btn.active { color: var(--gold); background: rgba(42,95,168,0.08); }
   .bnav-btn:hover { color: var(--gold); }
   .bnav-icon { font-size: 1.35rem; line-height: 1; }
   .bnav-label { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.03em; }
@@ -54,7 +54,7 @@
   @media (min-width: 700px) { .page { padding-left: 2rem; padding-right: 2rem; } }
   nav {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(245,240,232,0.95);
+    background: rgba(238,242,248,0.97);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     padding: 0 2rem;
@@ -119,7 +119,7 @@
     transition: all 0.2s;
   }
   .year-tab:hover, .year-tab.active {
-    background: rgba(201,168,76,0.1); border-color: var(--gold); color: var(--gold);
+    background: rgba(42,95,168,0.1); border-color: var(--gold); color: var(--gold);
   }
 
   /* STATS GRID */
@@ -132,7 +132,7 @@
     border-radius: var(--radius); padding: 1.25rem;
     transition: border-color 0.2s;
   }
-  .stat-card:hover { border-color: rgba(201,168,76,0.3); }
+  .stat-card:hover { border-color: rgba(42,95,168,0.3); }
   .stat-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
   .stat-value { font-size: 1.8rem; font-weight: 600; color: var(--gold2); }
   .stat-sub { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
@@ -160,9 +160,9 @@
     width: 28px; height: 28px; border-radius: 50%;
     font-weight: 700; font-size: 0.85rem;
   }
-  .rank-1 { background: linear-gradient(135deg, #9a6f1e, #c9a84c); color: #fff; }
-  .rank-2 { background: linear-gradient(135deg, #7a7a7a, #a0a0a0); color: #fff; }
-  .rank-3 { background: linear-gradient(135deg, #a0673a, #c0804a); color: #fff; }
+  .rank-1 { background: linear-gradient(135deg, #c9a030, #e8c040); color: #fff; }
+  .rank-2 { background: linear-gradient(135deg, #8090aa, #a0b0c8); color: #fff; }
+  .rank-3 { background: linear-gradient(135deg, #a05030, #c07050); color: #fff; }
   .rank-other { background: var(--surface2); color: var(--muted); }
   .bar-wrap { display: flex; align-items: center; gap: 0.75rem; }
   .bar-bg { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
@@ -413,7 +413,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik</h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v1.1</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -616,29 +616,36 @@
 const SUPABASE_URL = "https://zdqdjkqnyjuaznxpgubh.supabase.co";
 const SUPABASE_KEY = "sb_publishable_seLB9o3sE-QJp5koErHYow_ni-IcnVq";
 
+const SB_HEADERS = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+};
 async function sbGet(table, filters = '') {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filters}`, {
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-  });
-  return res.ok ? res.json() : [];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filters}`, {
+      mode: 'cors', headers: SB_HEADERS
+    });
+    return res.ok ? res.json() : [];
+  } catch(e) { console.error('sbGet error:', e); return []; }
 }
 async function sbUpsert(table, data) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates'
-    },
-    body: JSON.stringify(data)
-  });
-  return res.ok;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST', mode: 'cors',
+      headers: { ...SB_HEADERS, Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(data)
+    });
+    return res.ok;
+  } catch(e) { console.error('sbUpsert error:', e); return false; }
 }
 async function sbDelete(table, filter) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
-    method: 'DELETE',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-  });
-  return res.ok;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+      method: 'DELETE', mode: 'cors', headers: SB_HEADERS
+    });
+    return res.ok;
+  } catch(e) { console.error('sbDelete error:', e); return false; }
 }
 async function sbMeta(key) {
   const rows = await sbGet('metadata', `key=eq.${key}`);
@@ -955,9 +962,9 @@ function getAllTreffen(year) {
   const hist = historicalData[year];
   const custom = appData.treffen.filter(t => new Date(t.date).getFullYear() === year);
   if (hist) {
-    return [...hist.treffen, ...custom].sort((a,b) => new Date(a.date) - new Date(b.date));
+    return [...hist.treffen, ...custom].sort((a,b) => new Date(b.date) - new Date(a.date));
   }
-  return custom.sort((a,b) => new Date(a.date) - new Date(b.date));
+  return custom.sort((a,b) => new Date(b.date) - new Date(a.date));
 }
 
 function getYearStats(year) {
@@ -1019,22 +1026,24 @@ function renderDashboard() {
 
   const table = document.getElementById('rankingTable');
   table.innerHTML = `<thead><tr>
-    <th>#</th><th>Mitglied</th><th>Punkte</th><th style="min-width:160px">Anwesenheit</th><th>Quote</th>
+    <th style="width:36px">#</th><th>Mitglied</th><th style="width:54px">Pkt</th><th>Quote</th>
   </tr></thead><tbody>${ranked.map((r,i)=>`
     <tr>
-      <td><span class="rank-badge rank-${i<3?i+1:'other'}">${i+1}</span></td>
-      <td>${r.name}</td>
-      <td>${r.pts}</td>
-      <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${(r.pts/maxPts*100).toFixed(0)}%"></div></div></div></td>
-      <td class="pct-text">${(r.pct*100).toFixed(2)}%</td>
+      <td><span class="rank-badge rank-${i<3?i+1:'other'}" style="width:26px;height:26px;font-size:0.75rem">${i+1}</span></td>
+      <td>
+        <div style="font-weight:600;font-size:0.9rem">${r.name}</div>
+        <div class="bar-bg" style="margin-top:4px"><div class="bar-fill" style="width:${(r.pts/maxPts*100).toFixed(0)}%"></div></div>
+      </td>
+      <td style="font-weight:700;color:var(--gold);font-size:0.95rem">${r.pts}</td>
+      <td class="pct-text" style="font-size:0.88rem">${(r.pct*100).toFixed(2)}%</td>
     </tr>`).join('')}</tbody>`;
 
   renderExtraStats(treffen, members, stattgefunden);
 }
 
 const memberColors = {
-    "Christoph":"#c9a84c","Patrick":"#e07b39","Fabian":"#6aaa7a",
-    "André":"#7a9fd4","Jan":"#c96a9a","Oliver":"#9a7ad4"
+    "Christoph":"#c9a030","Patrick":"#d05020","Fabian":"#2a8a50",
+    "André":"#2a5fa8","Jan":"#a03080","Oliver":"#6040c0"
   };
 
 function renderExtraStats(treffen, members, stattgefunden) {
@@ -1352,7 +1361,7 @@ function renderOverall() {
       const maxP = hist ? hist.maxPossible : 50;
       const pts = hist ? (hist.totals[m]||0) : 0;
       const pct = (pts/maxP*100).toFixed(0);
-      return `<td>${pts} <span style="color:var(--muted);font-size:0.8rem">(${pct}%)</span></td>`;
+      return `<td style="white-space:nowrap">${pts}<span style="color:var(--muted);font-size:0.75rem"> ${pct}%</span></td>`;
     }).join('');
     const total = grandTotals[m];
     const rankBadge = rank < 3
@@ -1429,9 +1438,9 @@ function renderOverall() {
   // Build SVG chart per year — attendance line per member
   document.getElementById('overallContent').innerHTML = `
     <h2 class="section-title">Gesamtübersicht (nach Gesamtteilnahmen sortiert)</h2>
-    <div style="overflow-x:auto;margin-bottom:2rem">
-    <table class="ranking-table">
-      <thead><tr><th>Mitglied</th>${years.map(y=>`<th>${y}</th>`).join('')}<th style="color:var(--gold)">Gesamt</th></tr></thead>
+    <div style="overflow-x:auto;margin-bottom:2rem;-webkit-overflow-scrolling:touch">
+    <table class="ranking-table" style="font-size:0.82rem;min-width:340px">
+      <thead><tr><th>Mitglied</th>${years.map(y=>`<th style="white-space:nowrap">${y}</th>`).join('')}<th style="color:var(--gold)">∑</th></tr></thead>
       <tbody>${tableRows}</tbody>
     </table></div>
 
