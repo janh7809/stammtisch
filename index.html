@@ -962,7 +962,10 @@ function getAllTreffen(year) {
   const hist = historicalData[year];
   const custom = appData.treffen.filter(t => new Date(t.date).getFullYear() === year);
   if (hist) {
-    return [...hist.treffen, ...custom].sort((a,b) => new Date(b.date) - new Date(a.date));
+    // custom (Supabase) overrides historical: merge, custom wins on same date
+    const customDates = new Set(custom.map(t => t.date));
+    const histFiltered = hist.treffen.filter(t => !customDates.has(t.date));
+    return [...histFiltered, ...custom].sort((a,b) => new Date(b.date) - new Date(a.date));
   }
   return custom.sort((a,b) => new Date(b.date) - new Date(a.date));
 }
@@ -2106,21 +2109,9 @@ function saveEditTreffen() {
     note: document.getElementById('editBemerkung').value,
   };
 
-  // Check if it's a custom treffen
-  const customIdx = appData.treffen.findIndex(x => x.date === editingDate);
-  if (customIdx >= 0) {
-    appData.treffen[customIdx] = updated;
-  } else {
-    // It's a historical treffen — store as override in appData
-    // Remove any existing override, then push
-    appData.treffen = appData.treffen.filter(x => x.date !== editingDate);
-    appData.treffen.push(updated);
-    // Also patch the in-memory historical data so it shows immediately
-    if (hist) {
-      const histIdx = hist.treffen.findIndex(x => x.date === editingDate);
-      if (histIdx >= 0) hist.treffen[histIdx] = updated;
-    }
-  }
+  // Always store in appData (Supabase) — it overrides historical data via getAllTreffen
+  appData.treffen = appData.treffen.filter(x => x.date !== editingDate);
+  appData.treffen.push(updated);
 
   saveData();
   saveTreffenToSupabase(updated).then(() => showMsg('Treffen aktualisiert! ✓', true)).catch(() => showMsg('Treffen aktualisiert! ✓', true));
