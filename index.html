@@ -413,7 +413,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v1.1</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v1.3</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -821,8 +821,6 @@ const historicalData = {
       {date:"2024-12-12",ort:"-",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:0,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · Oliver: Frühschicht · André: Bere Veranstaltung",note:"Edvin hat den Anker übernommen und hatte Schuhe an"},
       {date:"2024-12-19",ort:"Christoph",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:1},excuse:"Patrick: nicht entschuldigt · Jan: geschäftlich · Christoph: Tina Weihnachtsfeier",note:""},
       {date:"2024-12-26",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · Oliver: Frühschicht · Christoph: Weihnachtsfeier",note:""},
-      {date:"2025-01-02",ort:"Patrick",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"André: ohne Begründung · Haddai: krank · Jan: ohne Begründung · Patrick: nicht entschuldigt · Feyle: Miri Geburtstag",note:"Ausgefallen – Oliver wäre einziger gewesen"},
-      {date:"2025-01-09",ort:"André",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: ohne Begründung · Patrick: nicht entschuldigt",note:""},
     ]
   },
   2025: {
@@ -832,6 +830,8 @@ const historicalData = {
     unexcused: {"2025-01-30":["Patrick"],"2025-04-24":["Patrick","Oliver"],"2025-06-12":["Oliver"],"2025-08-07":["Fabian","André"],"2025-11-06":["Christoph"],"2025-11-13":["Patrick"],"2025-11-20":["Patrick"],"2025-12-18":["Patrick","Jan","Oliver"]},
     excused_no_reason: {"Christoph":3,"Patrick":5,"Fabian":2,"André":3,"Jan":1,"Oliver":5},
     treffen: [
+      {date:"2025-01-02",ort:"Patrick",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"André: ohne Begründung · Haddai: krank · Jan: ohne Begründung · Patrick: nicht entschuldigt · Feyle: Miri Geburtstag",note:"Ausgefallen – Oliver wäre einziger gewesen"},
+      {date:"2025-01-09",ort:"André",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: ohne Begründung · Patrick: nicht entschuldigt",note:""},
       {date:"2025-01-16",ort:"Christoph",guests:"-",attendance:{Christoph:1,Patrick:1,Fabian:1,André:0,Jan:0,Oliver:0},excuse:"Oliver: nicht fit · Jan: braucht Ruhe",note:"Patrick: Stammmitgliedschaft unklar"},
       {date:"2025-01-23",ort:"-",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Oliver: Zahn OP · Jan: Urlaub · Patrick: nicht entschuldigt",note:""},
       {date:"2025-01-30",ort:"Anker",guests:"Dominik",attendance:{Christoph:1,Patrick:1,Fabian:0,André:1,Jan:0,Oliver:0},excuse:"Fabian: Kids · Oliver: Frühschicht · Jan: Rückreise",note:""},
@@ -882,8 +882,6 @@ const historicalData = {
       {date:"2025-12-11",ort:"Anker",guests:"Alexander",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · Oliver: Frühschicht",note:""},
       {date:"2025-12-18",ort:"-",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: flach · Patrick: keine Begründung",note:""},
       {date:"2025-12-25",ort:"-",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Patrick: keine Begründung · Oliver: Frühschicht · Christoph: Tina nicht da · André: keine Begründung · Jan: Besuch",note:"Ausgefallen – Feyle einzig verfügbar"},
-      {date:"2026-01-01",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: keine Begründung · Oliver: krank",note:""},
-      {date:"2026-01-08",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Jan: nicht entschuldigt · Christoph: Weihnachtsfeier · André: krank · Oliver: nicht entschuldigt · Patrick: nicht entschuldigt",note:"Ausgefallen – Feyle einzig verfügbar"},
     ]
   },
   2026: {
@@ -893,6 +891,8 @@ const historicalData = {
     unexcused: {"2026-01-22":["Patrick"],"2026-03-26":["Patrick"]},
     excused_no_reason: {"Christoph":0,"Patrick":1,"Fabian":0,"André":0,"Jan":0,"Oliver":0},
     treffen: [
+      {date:"2026-01-01",ort:"Anker",guests:"-",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: keine Begründung · Oliver: krank",note:""},
+      {date:"2026-01-08",ort:"Anker",guests:"-",attendance:{Christoph:0,Patrick:0,Fabian:0,André:0,Jan:0,Oliver:0},excuse:"Jan: nicht entschuldigt · Christoph: Weihnachtsfeier · André: krank · Oliver: nicht entschuldigt · Patrick: nicht entschuldigt",note:"Ausgefallen – Feyle einzig verfügbar"},
       {date:"2026-01-08",ort:"Anker",guests:"-",attendance:{Christoph:0.5,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: nicht entschuldigt · Oliver: noch im Geschäft",note:""},
       {date:"2026-01-15",ort:"Anker",guests:"Alexander, Timo",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Patrick: Messe · Jan: geschäftlich · Oliver: Frühschicht",note:""},
       {date:"2026-01-22",ort:"Anker",guests:"Timo",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0.5},excuse:"Patrick: nicht entschuldigt",note:"Oliver kam nach 21:30 Uhr"},
@@ -1203,6 +1203,21 @@ function setDashYear(y) { currentDashYear = y; renderDashboard(); }
 // ============================================================
 // RENDER TREFFEN
 // ============================================================
+function formatExcuse(text) {
+  if (!text) return '';
+  // Split on newlines or · delimiter
+  const lines = text.split(/\n|·/).map(s => s.trim()).filter(Boolean);
+  return lines.map(line => {
+    // Already in "Name: reason" format — use as-is
+    // Convert long-form "X hat sich entschuldigt mit der Begründung Y" → "X: Y"
+    let formatted = line
+      .replace(/^(.+?) hat sich entschuldigt mit der Begründung[\s"]+(.+?)["\s]*$/i, '$1: $2')
+      .replace(/^(.+?) hat sich entschuldigt aber ohne Begründung\.?$/i, '$1: entschuldigt (ohne Begründung)')
+      .replace(/^(.+?) hat sich nicht entschuldigt.*$/i, '$1: ⚠ unentschuldigt');
+    return `<div style="padding:0.25rem 0;border-bottom:1px solid var(--border);font-size:0.88rem"><strong style="color:var(--gold2)">${formatted.split(':')[0]}:</strong>${formatted.includes(':') ? formatted.substring(formatted.indexOf(':')+1) : ''}</div>`;
+  }).join('');
+}
+
 function renderTreffen() {
   const years = [2023,2024,2025,2026];
   const tabsEl = document.getElementById('treffenYearTabs');
@@ -1210,7 +1225,7 @@ function renderTreffen() {
     `<button class="year-tab ${y===currentTreffenYear?'active':''}" onclick="setTreffenYear(${y})">${y}</button>`
   ).join('');
 
-  const treffen = getAllTreffen(currentTreffenYear);
+  const treffen = getAllTreffen(currentTreffenYear).sort((a,b) => new Date(b.date) - new Date(a.date));
   const hist = historicalData[currentTreffenYear];
   const members = hist ? hist.members : appData.members;
 
@@ -1243,7 +1258,7 @@ function renderTreffen() {
       <div class="attendance-dots">${dots}</div>
       <div class="treffen-detail" id="detail-${currentTreffenYear}-${idx}">
         ${t.guests && t.guests !== '-' ? `<div class="detail-row"><strong>Gäste:</strong><p>${t.guests}</p></div>` : ''}
-        ${t.excuse ? `<div class="detail-row"><strong>Entschuldigungen:</strong><div style="margin-top:0.4rem">${t.excuse.split(/\\n|·/).map(s=>s.trim()).filter(Boolean).map(s=>`<div style="padding:0.2rem 0;border-bottom:1px solid var(--border);font-size:0.88rem">${s}</div>`).join('')}</div></div>` : ''}
+        ${t.excuse ? `<div class="detail-row"><strong>Entschuldigungen:</strong><div style="margin-top:0.4rem">${formatExcuse(t.excuse)}</div></div>` : ''}
         ${t.note ? `<div class="detail-row"><strong>Bemerkungen:</strong><p>${t.note}</p></div>` : ''}
         ${!t.guests && !t.excuse && !t.note ? '<p style="color:var(--muted);font-size:0.85rem">Keine weiteren Details.</p>' : ''}
         ${isAdmin ? `<div style="margin-top:0.75rem"><button class="btn-danger" onclick="deleteTreffen('${t.date}',event)">Löschen</button></div>` : ''}
