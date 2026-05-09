@@ -458,7 +458,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v3.3</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v3.6</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -1647,17 +1647,90 @@ function setDashYear(y) { currentDashYear = y; renderDashboard(); }
 // ============================================================
 function formatExcuse(text) {
   if (!text) return '';
-  // Split on newlines or · delimiter
   const lines = text.split(/\n|·/).map(s => s.trim()).filter(Boolean);
-  return lines.map(line => {
-    // Already in "Name: reason" format — use as-is
-    // Convert long-form "X hat sich entschuldigt mit der Begründung Y" → "X: Y"
-    let formatted = line
-      .replace(/^(.+?) hat sich entschuldigt mit der Begründung[\s"]+(.+?)["\s]*$/i, '$1: $2')
-      .replace(/^(.+?) hat sich entschuldigt aber ohne Begründung\.?$/i, '$1: entschuldigt (ohne Begründung)')
-      .replace(/^(.+?) hat sich nicht entschuldigt.*$/i, '$1: ⚠ unentschuldigt');
-    return `<div style="padding:0.25rem 0;border-bottom:1px solid var(--border);font-size:0.88rem"><strong style="color:var(--gold2)">${formatted.split(':')[0]}:</strong>${formatted.includes(':') ? formatted.substring(formatted.indexOf(':')+1) : ''}</div>`;
-  }).join('');
+
+  // Categorise each line
+  const withReason = [], withoutReason = [], unexcused = [];
+
+  lines.forEach(line => {
+    // Extract name: everything before first "hat sich" or first ":"
+    let name = '', reason = '';
+    const noExcMatch = line.match(/^(.+?) hat sich nicht entschuldigt/i);
+    const noReasonMatch = line.match(/^(.+?) hat sich entschuldigt aber (ohne|keine) Begründung/i);
+    const withReasonMatch = line.match(/^(.+?) hat sich entschuldigt mit der Begr[üu]ndung[\s"]+(.+?)["\'\s]*$/i);
+    const colonMatch = line.match(/^(.+?):\s*(.*)$/);
+
+    if (noExcMatch) {
+      unexcused.push({ name: noExcMatch[1].trim(), reason: '' });
+    } else if (noReasonMatch) {
+      withoutReason.push({ name: noReasonMatch[1].trim(), reason: '' });
+    } else if (withReasonMatch) {
+      withReason.push({ name: withReasonMatch[1].trim(), reason: withReasonMatch[2].trim().replace(/["\']/g,'') });
+    } else if (colonMatch) {
+      // Guess category from content
+      const r = colonMatch[2].toLowerCase();
+      const n = colonMatch[1].trim();
+      const g = colonMatch[2].trim();
+      if (r.includes('nicht entschuldigt') || r.includes('unentschuldigt')) {
+        unexcused.push({ name: n, reason: '' });
+      } else if (r.includes('ohne begründung') || r.includes('keine begründung')) {
+        withoutReason.push({ name: n, reason: '' });
+      } else {
+        withReason.push({ name: n, reason: g });
+      }
+    }
+  });
+
+  // ── Render one category block ──────────────────────────────────────────────
+  function catBlock(items, color, bgColor, borderColor, icon, label) {
+    const chips = items.map(item => `
+      <div style="display:inline-flex;align-items:center;gap:0.35rem;
+        background:${bgColor};border:1px solid ${borderColor};
+        border-radius:20px;padding:0.2rem 0.5rem 0.2rem 0.25rem;
+        margin:0.2rem;flex-shrink:0">
+        ${getAvatar(item.name,'sm')}
+        <div>
+          <span style="font-weight:600;font-size:0.82rem;color:var(--text)">${item.name}</span>
+          ${item.reason ? `<div style="font-size:0.75rem;color:var(--muted);line-height:1.2;max-width:180px">${item.reason}</div>` : ''}
+        </div>
+      </div>`).join('');
+
+    return `<div style="margin-bottom:0.5rem">
+      <div style="display:flex;align-items:center;gap:0.35rem;margin-bottom:0.3rem">
+        <span style="font-size:0.9rem">${icon}</span>
+        <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;
+          letter-spacing:0.07em;color:${color}">${label}</span>
+        <span style="font-size:0.72rem;font-weight:700;background:${borderColor};
+          color:${color};border-radius:10px;padding:0.1rem 0.4rem">${items.length}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.1rem">${chips}</div>
+    </div>`;
+  }
+
+  let html = '';
+
+  if (withReason.length) {
+    html += catBlock(withReason,
+      'var(--success)', 'rgba(42,150,80,0.08)', 'rgba(42,150,80,0.25)',
+      '✅', 'Entschuldigt mit Begründung');
+  }
+  if (withoutReason.length) {
+    html += catBlock(withoutReason,
+      'var(--gold)', 'rgba(201,168,76,0.1)', 'rgba(201,168,76,0.3)',
+      '〜', 'Entschuldigt ohne Begründung');
+  }
+  if (unexcused.length) {
+    html += catBlock(unexcused,
+      'var(--danger)', 'rgba(176,48,48,0.08)', 'rgba(176,48,48,0.3)',
+      '⚠️', 'Unentschuldigt');
+  }
+
+  // Fallback: if nothing categorised, render as plain lines
+  if (!html) {
+    html = lines.map(l => `<div style="font-size:0.85rem;padding:0.2rem 0;color:var(--muted)">${l}</div>`).join('');
+  }
+
+  return html;
 }
 
 function renderTreffen() {
@@ -1677,43 +1750,103 @@ function renderTreffen() {
   list.innerHTML = treffen.map((t,idx) => {
     const ausgefallen = !t.ort || t.ort === '-' || Object.values(t.attendance).every(v=>v===0);
     const total = Object.values(t.attendance).reduce((a,b)=>a+b,0);
-    const dateStr = new Date(t.date).toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'long', year:'numeric'});
-    const dots = members.map(m => {
-      const v = t.attendance[m] ?? 0;
-      const cls = v===1?'present':v===0.5?'half':'absent';
-      const icon = v===1?'✓':v===0.5?'½':'✗';
-      return `<span class="dot ${cls}">${getAvatar(m,'sm')} ${icon} ${m}</span>`;
+    const dateStr = new Date(t.date).toLocaleDateString('de-DE', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
+
+    // Parse excuse text into per-member lookup
+    const excuseByMember = {};
+    const excuseCategory = {}; // name -> 'ok'|'no-reason'|'unexcused'
+    if (t.excuse) {
+      const lines = t.excuse.split(/\n|·/).map(s=>s.trim()).filter(Boolean);
+      lines.forEach(line => {
+        const noExc    = line.match(/^(.+?) hat sich nicht entschuldigt/i);
+        const noReason = line.match(/^(.+?) hat sich entschuldigt aber (ohne|keine) Begründung/i);
+        const withR    = line.match(/^(.+?) hat sich entschuldigt mit der Begr[üu]ndung[\s"]+(.+?)["\'\s]*$/i);
+        const colon    = line.match(/^(.+?):\s*(.+)$/);
+        if (noExc)    { excuseCategory[noExc[1].trim()]   = 'unexcused'; excuseByMember[noExc[1].trim()]   = ''; }
+        else if (noReason) { excuseCategory[noReason[1].trim()] = 'no-reason'; excuseByMember[noReason[1].trim()] = ''; }
+        else if (withR)    { excuseCategory[withR[1].trim()]    = 'ok';        excuseByMember[withR[1].trim()]    = withR[2].trim().replace(/["\']/g,''); }
+        else if (colon) {
+          const nm = colon[1].trim(), gr = colon[2].trim();
+          const gl = gr.toLowerCase();
+          if (gl.includes('nicht entschuldigt')||gl.includes('unentschuldigt')) { excuseCategory[nm]='unexcused'; excuseByMember[nm]=''; }
+          else if (gl.includes('ohne begründung')||gl.includes('keine begründung')) { excuseCategory[nm]='no-reason'; excuseByMember[nm]=''; }
+          else { excuseCategory[nm]='ok'; excuseByMember[nm]=gr; }
+        }
+      });
+    }
+
+    // ── Table rows: members then guests ──────────────────────────────────
+    function statusCell(name, val, isMember) {
+      const isHalf = val === 0.5;
+      if (val > 0) {
+        const label = isHalf
+          ? '<span style="color:var(--gold);font-weight:600">½ Spät</span>'
+          : '<span style="color:var(--success);font-weight:600">✓ Da</span>';
+        return `<td style="padding:0.3rem 0.5rem;vertical-align:middle">${label}</td><td style="padding:0.3rem 0.5rem;font-size:0.8rem;color:var(--muted)"></td>`;
+      } else {
+        const cat = excuseCategory[name] || '';
+        const reason = excuseByMember[name] || '';
+        let badge = '', reasonTxt = '';
+        if (cat === 'ok')         { badge = '<span style="color:var(--success);font-weight:600;font-size:0.82rem">✅ Entsch.</span>'; reasonTxt = reason; }
+        else if (cat==='no-reason'){ badge = '<span style="color:var(--gold);font-weight:600;font-size:0.82rem">〜 Entsch.</span>'; reasonTxt = 'Keine Begründung'; }
+        else if (cat==='unexcused'){ badge = '<span style="color:var(--danger);font-weight:600;font-size:0.82rem">⚠ Unentsch.</span>'; reasonTxt = ''; }
+        else                       { badge = '<span style="color:var(--danger);font-weight:600;font-size:0.82rem">✗ Weg</span>'; reasonTxt = ''; }
+        return `<td style="padding:0.3rem 0.5rem;vertical-align:middle">${badge}</td><td style="padding:0.3rem 0.5rem;font-size:0.8rem;color:var(--muted);vertical-align:middle">${reasonTxt}</td>`;
+      }
+    }
+
+    const memberRows = members.map(m => {
+      const val = t.attendance[m] ?? 0;
+      return `<tr style="border-bottom:0.5px solid var(--border)">
+        <td style="padding:0.35rem 0.5rem;vertical-align:middle;width:36px">${getAvatar(m,'sm')}</td>
+        <td style="padding:0.35rem 0.5rem;font-weight:500;font-size:0.88rem;vertical-align:middle;white-space:nowrap">${m}</td>
+        ${statusCell(m, val, true)}
+      </tr>`;
     }).join('');
 
+    const guestList = t.guests && t.guests !== '-'
+      ? t.guests.split(/,\s*/).map(g=>g.trim()).filter(Boolean) : [];
+
+    const guestRows = guestList.length ? `
+      <tr style="border-top:2px solid var(--border)">
+        <td colspan="4" style="padding:0.3rem 0.5rem;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Gäste</td>
+      </tr>
+      ${guestList.map(g => `<tr style="border-bottom:0.5px solid var(--border)">
+        <td style="padding:0.3rem 0.5rem;vertical-align:middle">${getAvatar(g,'sm')}</td>
+        <td style="padding:0.3rem 0.5rem;font-size:0.88rem;color:var(--muted);vertical-align:middle" colspan="3">${g}</td>
+      </tr>`).join('')}` : '';
+
+    const noteRow = t.note ? `
+      <div style="margin-top:0.6rem;padding:0.45rem 0.65rem;background:var(--surface2);border-radius:6px;border-left:3px solid var(--gold);font-size:0.83rem;color:var(--text)">
+        <span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--gold);display:block;margin-bottom:0.15rem">📝 Bemerkung</span>
+        ${t.note}
+      </div>` : '';
+
     const adminBar = isAdmin ? `
-      <div style="display:flex;gap:0.5rem;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border)">
-        <button class="btn-primary" style="flex:1;padding:0.5rem;font-size:0.85rem"
+      <div style="display:flex;gap:0.5rem;margin-top:0.65rem;padding-top:0.6rem;border-top:1px solid var(--border)">
+        <button class="btn-primary" style="flex:1;padding:0.4rem;font-size:0.82rem"
           onclick="openEditForm('${t.date}');event.stopPropagation()">✏ Bearbeiten</button>
-        <button class="btn-danger" style="padding:0.5rem 0.75rem;font-size:0.85rem"
+        <button class="btn-danger" style="padding:0.4rem 0.75rem;font-size:0.82rem"
           onclick="deleteTreffen('${t.date}',event)">🗑</button>
       </div>` : '';
 
-    const detailContent = `
-      ${t.guests && t.guests !== '-' ? `<div class="detail-row"><strong>Gäste:</strong><p>${t.guests}</p></div>` : ''}
-      ${t.excuse ? `<div class="detail-row"><strong>Entschuldigungen:</strong><div style="margin-top:0.4rem">${formatExcuse(t.excuse)}</div></div>` : ''}
-      ${t.note ? `<div class="detail-row"><strong>Bemerkungen:</strong><p>${t.note}</p></div>` : ''}
-      ${!t.guests && !t.excuse && !t.note ? '<p style="color:var(--muted);font-size:0.85rem">Keine weiteren Details.</p>' : ''}
-      ${adminBar}`;
-
     return `<div class="treffen-card">
-      ${ausgefallen?'<div class="ausgefallen-banner">⚠ Ausgefallen</div>':''}
-      <div class="treffen-header">
+      ${ausgefallen ? '<div class="ausgefallen-banner">⚠ Ausgefallen</div>' : ''}
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.75rem">
         <div>
           <div class="treffen-date">${dateStr}</div>
-          <div class="treffen-ort">${getLocationAvatar(t.ort||'','sm')} ${t.ort && t.ort!=='-' ? t.ort : 'Kein Ort'}</div>
+          <div class="treffen-ort" style="margin-top:0.25rem">${getLocationAvatar(t.ort||'','sm')} ${t.ort && t.ort!=='-' ? t.ort : 'Kein Ort'}</div>
         </div>
-        <div class="treffen-score">
-          <div class="num">${total}</div>
-          <div class="label">Teilnahmen</div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:1.4rem;font-weight:700;color:var(--gold)">${total}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">/ ${members.length}</div>
         </div>
       </div>
-      <div class="attendance-dots">${dots}</div>
-      <div class="treffen-detail open">${detailContent}</div>
+      <table style="width:100%;border-collapse:collapse;border:0.5px solid var(--border);border-radius:8px;overflow:hidden">
+        ${memberRows}${guestRows}
+      </table>
+      ${noteRow}
+      ${adminBar}
     </div>`;
   }).join('');
 }
