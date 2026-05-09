@@ -441,39 +441,14 @@
 <div class="modal-backdrop" id="avatarModal">
   <div class="modal" style="max-width:420px">
     <h2>Avatar — <span id="avatarEditName" style="color:var(--gold)"></span></h2>
-    <div style="text-align:center;margin-bottom:1.25rem">
-      <div id="avatarPreview" style="font-size:3.5rem;width:80px;height:80px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:0.5rem"></div>
-
-    </div>
-    <div class="form-row">
-      <label>Emoji auswählen</label>
-      <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.75rem">
-        ${Array.from('🧑👨👩🧔👱🧓👴👵😀😎🤓🥸🧐😏🤠🥳🍺🍻🎉🏆').map(e =>
-          `<button onclick="setAvatarEmoji('${e}')" style="font-size:1.4rem;background:none;border:1px solid var(--border);border-radius:6px;padding:0.2rem 0.35rem;cursor:pointer">${e}</button>`
-        ).join('')}
-      </div>
-      <div style="display:flex;gap:0.5rem">
-        <input type="text" id="customEmojiInput" placeholder="Eigenes Emoji..." maxlength="2" style="flex:1">
-        <button class="btn-primary" onclick="setAvatarEmojiCustom()" style="padding:0.55rem 0.9rem">OK</button>
-      </div>
-    </div>
-    <div class="form-row">
-      <label>Bild hochladen</label>
-      <input type="file" id="avatarImageInput" accept="image/*" onchange="handleAvatarImage(event)"
-        style="background:var(--surface2);padding:0.5rem;border-radius:8px;border:1px solid var(--border);width:100%">
-    </div>
-    <div class="modal-btns" style="margin-top:1rem">
-      <button class="btn-primary" onclick="saveAvatar()">Speichern</button>
-      <button class="btn-ghost" onclick="document.getElementById('avatarModal').classList.remove('open')">Abbrechen</button>
-      <button class="btn-danger" onclick="clearAvatar()" style="margin-left:auto">Zurücksetzen</button>
-    </div>
+    <div id="avatarModalBody"></div>
   </div>
 </div>
 
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v2.7</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v2.8</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -1014,9 +989,37 @@ function openAvatarEdit(name) {
   editingAvatar = name;
   pendingAvatar = { ...(avatarData[name] || { emoji: '🧑' }) };
   document.getElementById('avatarEditName').textContent = name;
+
+  const emojis = Array.from('🧑👨👩🧔👱🧓👴👵😀😎🤓🥸🧐😏🤠🥳🍺🍻🎉🏆⚓🏠🏡🌿🍻🎩🏰📮✨🔨🍕🌱🏔⛷🎯🌟💎');
+  const emojiButtons = emojis.map(e =>
+    `<button onclick="setAvatarEmoji('${e}')" style="font-size:1.4rem;background:none;border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.4rem;cursor:pointer;line-height:1.4">${e}</button>`
+  ).join('');
+
+  document.getElementById('avatarModalBody').innerHTML = `
+    <div style="text-align:center;margin-bottom:1.25rem">
+      <div id="avatarPreview" style="font-size:3rem;width:80px;height:80px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:0.4rem"></div>
+    </div>
+    <div class="form-row">
+      <label>Emoji auswählen</label>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.75rem">${emojiButtons}</div>
+      <div style="display:flex;gap:0.5rem">
+        <input type="text" id="customEmojiInput" placeholder="Eigenes Emoji..." maxlength="4" style="flex:1">
+        <button class="btn-primary" onclick="setAvatarEmojiCustom()" style="padding:0.55rem 0.9rem">OK</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Bild hochladen</label>
+      <input type="file" id="avatarImageInput" accept="image/*" onchange="handleAvatarImage(event)"
+        style="background:var(--surface2);padding:0.5rem;border-radius:8px;border:1px solid var(--border);width:100%">
+    </div>
+    <div class="modal-btns" style="margin-top:1rem">
+      <button class="btn-primary" onclick="saveAvatar()">Speichern</button>
+      <button class="btn-ghost" onclick="document.getElementById('avatarModal').classList.remove('open')">Abbrechen</button>
+      <button class="btn-danger" onclick="clearAvatar()" style="margin-left:auto">Zurücksetzen</button>
+    </div>`;
+
   updateAvatarPreview();
   document.getElementById('avatarModal').classList.add('open');
-  document.getElementById('customEmojiInput').value = '';
 }
 
 function updateAvatarPreview() {
