@@ -198,8 +198,7 @@
   .dot.present { background: rgba(106,170,122,0.15); color: var(--success); border: 1px solid rgba(106,170,122,0.2); }
   .dot.half { background: rgba(201,168,76,0.1); color: var(--gold); border: 1px solid rgba(201,168,76,0.2); }
   .dot.absent { background: rgba(201,99,99,0.1); color: var(--danger); border: 1px solid rgba(201,99,99,0.15); }
-  .treffen-detail { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); display: none; }
-  .treffen-detail.open { display: block; }
+  .treffen-detail { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); display: block; }
   .detail-row { margin-bottom: 0.5rem; font-size: 0.9rem; }
   .detail-row strong { color: var(--gold); }
   .detail-row p { color: var(--muted); margin-top: 0.2rem; line-height: 1.5; }
@@ -459,7 +458,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v3.2</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v3.3</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -549,19 +548,7 @@
       <textarea id="newExcuse" style="display:none"></textarea>
       <button class="btn-primary" onclick="saveTreffen()">Treffen speichern</button>
     </div>
-    <div class="admin-card">
-      <h3>Vergangene Treffen bearbeiten</h3>
-      <div class="form-row">
-        <label>Jahr auswählen</label>
-        <select id="editYear" onchange="loadEditList()">
-          <option value="2026">2026</option>
-          <option value="2025">2025</option>
-          <option value="2024">2024</option>
-          <option value="2023">2023</option>
-        </select>
-      </div>
-      <div id="editTreffenList"></div>
-    </div>
+
     <div class="admin-card">
       <h3>Mitglieder verwalten</h3>
       <div id="memberList"></div>
@@ -1698,12 +1685,27 @@ function renderTreffen() {
       return `<span class="dot ${cls}">${getAvatar(m,'sm')} ${icon} ${m}</span>`;
     }).join('');
 
-    return `<div class="treffen-card" onclick="toggleTreffen(${idx})">
+    const adminBar = isAdmin ? `
+      <div style="display:flex;gap:0.5rem;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+        <button class="btn-primary" style="flex:1;padding:0.5rem;font-size:0.85rem"
+          onclick="openEditForm('${t.date}');event.stopPropagation()">✏ Bearbeiten</button>
+        <button class="btn-danger" style="padding:0.5rem 0.75rem;font-size:0.85rem"
+          onclick="deleteTreffen('${t.date}',event)">🗑</button>
+      </div>` : '';
+
+    const detailContent = `
+      ${t.guests && t.guests !== '-' ? `<div class="detail-row"><strong>Gäste:</strong><p>${t.guests}</p></div>` : ''}
+      ${t.excuse ? `<div class="detail-row"><strong>Entschuldigungen:</strong><div style="margin-top:0.4rem">${formatExcuse(t.excuse)}</div></div>` : ''}
+      ${t.note ? `<div class="detail-row"><strong>Bemerkungen:</strong><p>${t.note}</p></div>` : ''}
+      ${!t.guests && !t.excuse && !t.note ? '<p style="color:var(--muted);font-size:0.85rem">Keine weiteren Details.</p>' : ''}
+      ${adminBar}`;
+
+    return `<div class="treffen-card">
       ${ausgefallen?'<div class="ausgefallen-banner">⚠ Ausgefallen</div>':''}
       <div class="treffen-header">
         <div>
           <div class="treffen-date">${dateStr}</div>
-          <div class="treffen-ort">📍 ${t.ort && t.ort!=='-' ? t.ort : 'Kein Ort'}</div>
+          <div class="treffen-ort">${getLocationAvatar(t.ort||'','sm')} ${t.ort && t.ort!=='-' ? t.ort : 'Kein Ort'}</div>
         </div>
         <div class="treffen-score">
           <div class="num">${total}</div>
@@ -1711,20 +1713,9 @@ function renderTreffen() {
         </div>
       </div>
       <div class="attendance-dots">${dots}</div>
-      <div class="treffen-detail" id="detail-${currentTreffenYear}-${idx}">
-        ${t.guests && t.guests !== '-' ? `<div class="detail-row"><strong>Gäste:</strong><p>${t.guests}</p></div>` : ''}
-        ${t.excuse ? `<div class="detail-row"><strong>Entschuldigungen:</strong><div style="margin-top:0.4rem">${formatExcuse(t.excuse)}</div></div>` : ''}
-        ${t.note ? `<div class="detail-row"><strong>Bemerkungen:</strong><p>${t.note}</p></div>` : ''}
-        ${!t.guests && !t.excuse && !t.note ? '<p style="color:var(--muted);font-size:0.85rem">Keine weiteren Details.</p>' : ''}
-        ${isAdmin ? `<div style="margin-top:0.75rem"><button class="btn-danger" onclick="deleteTreffen('${t.date}',event)">Löschen</button></div>` : ''}
-      </div>
+      <div class="treffen-detail open">${detailContent}</div>
     </div>`;
   }).join('');
-}
-
-function toggleTreffen(idx) {
-  const el = document.getElementById(`detail-${currentTreffenYear}-${idx}`);
-  if (el) el.classList.toggle('open');
 }
 
 function setTreffenYear(y) { currentTreffenYear = y; renderTreffen(); }
@@ -1982,7 +1973,6 @@ function renderAdmin() {
   renderMemberList();
   renderStatutenAdmin();
   renderManageLists();
-  loadEditList();
 }
 
 function memberAttRow(m, prefix) {
@@ -2078,7 +2068,7 @@ function clearReasonBtns(id) {
 function updateExcuseText(prefix) {
   // Auto-build the Entschuldigungen textarea from reason selections
   const members = prefix.startsWith('e') ? 
-    (historicalData[parseInt(document.getElementById('editYear').value)]?.members || appData.members) :
+    (historicalData[editingDate ? parseInt(editingDate.substring(0,4)) : new Date().getFullYear()]?.members || appData.members) :
     appData.members;
   const rstore = getReasonStore(prefix);
   const excuseId = prefix.startsWith('e') ? 'editExcuse' : 'newExcuse';
@@ -2684,7 +2674,7 @@ function loadEditList() {
 }
 
 function openEditForm(date) {
-  const year = parseInt(document.getElementById('editYear').value);
+  const year = parseInt(date.substring(0,4));
   const hist = historicalData[year];
   // Use getAllTreffen to get the correct (deduplicated) version
   const allT = getAllTreffen(year);
@@ -2757,7 +2747,7 @@ function openEditForm(date) {
 
 function saveEditTreffen() {
   if (!editingDate) return;
-  const year = parseInt(document.getElementById('editYear').value);
+  const year = parseInt(editingDate.substring(0,4));
   const hist = historicalData[year];
 
   const updated = {
