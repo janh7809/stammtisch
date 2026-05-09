@@ -430,7 +430,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v1.6</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v2.0</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -441,6 +441,7 @@
   <div class="stats-grid" id="statsGrid"></div>
   <h2 class="section-title">🏆 Rangliste</h2>
   <table class="ranking-table" id="rankingTable"></table>
+  <div id="dashMemberChart"></div>
   <div id="extraStats"></div>
 </div>
 
@@ -1065,12 +1066,165 @@ function renderDashboard() {
     </tr>`).join('')}</tbody>`;
 
   renderExtraStats(treffen, members, stattgefunden);
+  renderMemberLineChart(treffen, members);
 }
 
 const memberColors = {
     "Christoph":"#c9a030","Patrick":"#d05020","Fabian":"#2a8a50",
     "André":"#2a5fa8","Jan":"#a03080","Oliver":"#6040c0"
   };
+
+function renderMemberLineChart(treffen, members) {
+  const el = document.getElementById('dashMemberChart');
+  if (!el) return;
+
+  const data = treffen
+    .filter(t => Object.values(t.attendance||{}).some(v=>v>0))
+    .sort((a,b) => new Date(a.date)-new Date(b.date));
+  if (data.length < 2) { el.innerHTML = ''; return; }
+
+  const W = 700, H = 300;
+  const PAD = { t: 20, r: 20, b: 44, l: 40 };
+  const cW = W - PAD.l - PAD.r;
+  const cH = H - PAD.t - PAD.b;
+  const n = data.length;
+  const maxM = members.length;
+
+  const colors = {
+    Christoph:'#c9a030',Patrick:'#e05020',Fabian:'#2a9a50',
+    André:'#3a7adc',Jan:'#c030a0',Oliver:'#7050d0'
+  };
+
+  const xPos = i => PAD.l + (n > 1 ? (i/(n-1)) : 0.5) * cW;
+  const yPos = v => PAD.t + cH - (v / maxM) * cH;
+
+  // Build bezier path helper
+  function bezierPath(pts) {
+    if (!pts.length) return '';
+    let d = `M ${pts[0].x},${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+      const p = pts[i-1], c = pts[i];
+      const cpx = (p.x + c.x) / 2;
+      d += ` C ${cpx},${p.y} ${cpx},${c.y} ${c.x},${c.y}`;
+    }
+    return d;
+  }
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;overflow:visible">`;
+  svg += `<defs>
+    <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(42,95,168,0.18)"/>
+      <stop offset="100%" stop-color="rgba(42,95,168,0.01)"/>
+    </linearGradient>
+  </defs>`;
+
+  // Grid lines
+  for (let v = 0; v <= maxM; v++) {
+    const y = yPos(v);
+    svg += `<line x1="${PAD.l}" y1="${y}" x2="${W-PAD.r}" y2="${y}"
+      stroke="rgba(42,95,168,${v===0?0.2:0.08})" stroke-width="${v===0?1.5:1}"
+      stroke-dasharray="${v===0?'':'3,4'}"/>`;
+    if (v > 0 || v === 0)
+      svg += `<text x="${PAD.l-8}" y="${y+4}" text-anchor="end" font-size="11"
+        fill="var(--muted)" font-family="DM Sans,sans-serif">${v}</text>`;
+  }
+
+  // Month labels
+  const months = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const seenM = new Set();
+  data.forEach((t,i) => {
+    const d = new Date(t.date);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    if (!seenM.has(key)) {
+      seenM.add(key);
+      const x = xPos(i);
+      svg += `<line x1="${x}" y1="${PAD.t}" x2="${x}" y2="${PAD.t+cH}"
+        stroke="rgba(42,95,168,0.06)" stroke-width="1"/>`;
+      svg += `<text x="${x}" y="${H-4}" text-anchor="middle" font-size="10"
+        fill="var(--muted)" font-family="DM Sans,sans-serif">${months[d.getMonth()]}</text>`;
+    }
+  });
+
+  // Compute totals per treffen
+  const totals = data.map((t,i) => {
+    const cnt = members.filter(m=>(t.attendance[m]||0)>0).length;
+    return { x:xPos(i), y:yPos(cnt), cnt, date:t.date, ort:t.ort||'-' };
+  });
+
+  // Area fill under total line
+  const areaD = `M ${totals[0].x},${PAD.t+cH} L ${totals[0].x},${totals[0].y}`
+    + bezierPath(totals).slice(totals[0].x.toString().length + 2) // skip the M part
+    + ` L ${totals[totals.length-1].x},${PAD.t+cH} Z`;
+
+  // Simpler area: just straight lines to bottom corners
+  const areaPts = totals.map(p=>`${p.x},${p.y}`).join(' ');
+  const areaFull = `${PAD.l},${PAD.t+cH} ${areaPts} ${totals[totals.length-1].x},${PAD.t+cH}`;
+  svg += `<polygon points="${areaFull}" fill="url(#areaGrad)" stroke="none"/>`;
+
+  // Bold total line on top
+  const totalLinePath = bezierPath(totals);
+  svg += `<path d="${totalLinePath}" fill="none" stroke="rgba(42,95,168,0.95)"
+    stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+  // Location pin symbols above dots (small ▲ with tooltip)
+  data.forEach((t,i) => {
+    if (!t.ort || t.ort==='-') return;
+    const x = xPos(i);
+    const y = PAD.t + cH;  // bottom
+    // Small location marker at bottom of chart
+    const d2 = new Date(t.date);
+    const ds = d2.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+    svg += `<text x="${x}" y="${PAD.t+cH-3}" text-anchor="middle" font-size="7"
+      fill="var(--muted)" opacity="0.5" font-family="DM Sans,sans-serif">
+      <title>📍 ${t.ort} — ${ds}</title>📍</text>`;
+  });
+
+  // Interactive dots on total line
+  totals.forEach(p => {
+    const d2 = new Date(p.date);
+    const ds = d2.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="5" fill="white"
+      stroke="rgba(42,95,168,0.9)" stroke-width="2.5">
+      <title>${ds} · 📍 ${p.ort} · ${p.cnt}/${members.length} Mitglieder</title>
+    </circle>`;
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="2.5" fill="rgba(42,95,168,0.9)">
+      <title>${ds} · 📍 ${p.ort} · ${p.cnt}/${members.length} Mitglieder</title>
+    </circle>`;
+  });
+
+  svg += `</svg>`;
+
+  // Compact legend: member colored dots in a row
+  const memberLegend = members.map(m =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;margin-bottom:3px;font-size:0.75rem;color:var(--muted)">
+      <span style="width:10px;height:10px;border-radius:50%;background:${colors[m]||'#888'};opacity:0.7;flex-shrink:0"></span>${m}
+    </span>`).join('');
+
+  // Member attendance mini-bars below chart
+  const memberBars = members.map(m => {
+    const attended = data.filter(t=>(t.attendance[m]||0)>0).length;
+    const pct = data.length > 0 ? (attended/data.length*100).toFixed(0) : 0;
+    const color = colors[m]||'#888';
+    return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+      <span style="width:10px;height:10px;border-radius:50%;background:${color};opacity:0.8;flex-shrink:0"></span>
+      <span style="font-size:0.78rem;min-width:70px;color:var(--text);font-weight:500">${m}</span>
+      <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};opacity:0.7;border-radius:3px;transition:width 0.6s ease"></div>
+      </div>
+      <span style="font-size:0.75rem;color:var(--muted);min-width:28px;text-align:right">${pct}%</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin:1.5rem 0 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
+        <h2 class="section-title" style="margin:0;border:none;padding:0">📈 Teilnahmen im Jahresverlauf</h2>
+        <span style="font-size:0.75rem;color:var(--muted)">📍 Hover für Location & Anzahl</span>
+      </div>
+      ${svg}
+
+    </div>`;
+}
 
 function renderExtraStats(treffen, members, stattgefunden) {
   // 1. Längste aufeinanderfolgende Teilnahmen — sorted by streak desc
