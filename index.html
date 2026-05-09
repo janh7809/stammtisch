@@ -378,6 +378,7 @@
   .all-attend-list { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .all-attend-item { font-size: 0.82rem; color: var(--muted); padding: 0.2rem 0.5rem; background: rgba(201,168,76,0.06); border-radius: 4px; }
 </style>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -429,7 +430,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v1.5</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v1.6</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -1978,36 +1979,18 @@ const _origSaveTreffen = saveTreffen;
 // EXCEL EXPORT
 // ============================================================
 function exportToExcel() {
-  const years = [2023, 2024, 2025, 2026];
-  const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
-  const months = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-
-  // Build CSV content for each sheet, then combine as a zip-less multi-sheet
-  // Use SheetJS-style but pure — we'll generate an XLSX manually via a data URI
-  // Since SheetJS isn't loaded, use a CSV download per year instead — simpler & reliable
-
-  // Actually: build an HTML table file with multiple sheets using XLSX mime type
-  // The cleanest approach without a library: generate a proper XLSX using base64
-
-  // We'll use the Blob + multiple CSV approach — one file per year + overall
-  // But user wants one file → use a simple HTML→XLS trick (opens in Excel with tabs)
-
-  let xmlSheets = '';
-  let xmlWorksheet = '';
-
-  function cellVal(v) {
-    if (v === null || v === undefined || v === '' || v === '-') return '<Cell><Data ss:Type="String">-</Data></Cell>';
-    if (typeof v === 'number') return `<Cell><Data ss:Type="Number">${v}</Data></Cell>`;
-    return `<Cell><Data ss:Type="String">${String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}</Data></Cell>`;
+  if (typeof XLSX === 'undefined') {
+    showMsg('⚠️ Excel-Bibliothek lädt noch — bitte kurz warten und nochmal versuchen.', false);
+    return;
   }
 
-  function makeSheet(name, rows) {
-    let xml = `<Worksheet ss:Name="${name.replace(/[^a-zA-Z0-9 ]/g,'').substring(0,31)}"><Table>`;
-    rows.forEach(row => {
-      xml += '<Row>' + row.map(cellVal).join('') + '</Row>';
-    });
-    xml += '</Table></Worksheet>';
-    return xml;
+  const years = [2023, 2024, 2025, 2026];
+  const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
+  const wb = XLSX.utils.book_new();
+
+  // ── Header style helper ──────────────────────────────────────────────────
+  function makeWS(rows) {
+    return XLSX.utils.aoa_to_sheet(rows);
   }
 
   // ── Per-year sheets ──────────────────────────────────────────────────────
@@ -2016,7 +1999,9 @@ function exportToExcel() {
     const treffen = getAllTreffen(year).sort((a,b) => new Date(a.date)-new Date(b.date));
     const mems = hist ? hist.members : members;
 
-    const header = ['Datum','Wochentag','Ort','Gäste', ...mems.map(m=>`${m} (Teilnahme)`), 'Anwesende gesamt','Entschuldigung & Begründung','Bemerkungen'];
+    const header = ['Datum','Wochentag','Ort','Gäste',
+      ...mems.map(m => `${m}`), 'Anwesend gesamt',
+      'Entschuldigung & Begründung','Bemerkungen'];
     const rows = [header];
 
     treffen.forEach(t => {
@@ -2026,34 +2011,45 @@ function exportToExcel() {
       rows.push([
         t.date, weekday, t.ort||'-', t.guests||'-',
         ...mems.map(m => t.attendance[m] ?? 0),
-        total, t.excuse||'', t.note||''
+        total,
+        t.excuse||'',
+        t.note||''
       ]);
     });
 
     // Totals row
-    const totalsRow = ['GESAMT','','','', ...mems.map(m => {
-      return treffen.reduce((s,t) => s+(t.attendance[m]||0), 0);
-    }), '', '', ''];
-    rows.push(totalsRow);
+    rows.push([
+      'GESAMT', '', '', '',
+      ...mems.map(m => treffen.reduce((s,t) => s+(t.attendance[m]||0), 0)),
+      treffen.reduce((s,t) => s + mems.filter(m=>(t.attendance[m]||0)>0).length, 0) / (treffen.length||1),
+      '', ''
+    ]);
 
-    xmlSheets += makeSheet(`${year}`, rows);
+    const ws = makeWS(rows);
+
+    // Column widths
+    ws['!cols'] = [
+      {wch:12},{wch:10},{wch:18},{wch:30},
+      ...mems.map(()=>({wch:12})),
+      {wch:14},{wch:60},{wch:40}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, String(year));
   });
 
   // ── Overall sheet ────────────────────────────────────────────────────────
-  const overallHeader = ['Mitglied', ...years.map(y=>`${y} Teilnahmen`), ...years.map(y=>`${y} %`), 'Gesamt'];
-  const overallRows = [overallHeader];
+  const overallRows = [['Mitglied', ...years.map(y=>`${y} Teiln.`), ...years.map(y=>`${y} %`), 'Gesamt']];
   members.forEach(m => {
-    const yearPts = years.map(y => (historicalData[y]?.totals[m]||0));
-    const yearPct = years.map(y => {
-      const hist = historicalData[y];
-      const pts = hist?.totals[m]||0;
-      const maxP = hist?.maxPossible||50;
-      return Math.round(pts/maxP*100) + '%';
+    const pts = years.map(y => historicalData[y]?.totals[m]||0);
+    const pcts = years.map(y => {
+      const h = historicalData[y];
+      return h ? Math.round((h.totals[m]||0)/h.maxPossible*100)+'%' : '-';
     });
-    const total = yearPts.reduce((a,b)=>a+b,0);
-    overallRows.push([m, ...yearPts, ...yearPct, total]);
+    overallRows.push([m, ...pts, ...pcts, pts.reduce((a,b)=>a+b,0)]);
   });
-  xmlSheets += makeSheet('Overall', overallRows);
+  const wsOverall = makeWS(overallRows);
+  wsOverall['!cols'] = [{wch:14},...years.map(()=>({wch:12})),...years.map(()=>({wch:8})),{wch:10}];
+  XLSX.utils.book_append_sheet(wb, wsOverall, 'Overall');
 
   // ── Locations sheet ──────────────────────────────────────────────────────
   const allLocs = {};
@@ -2061,14 +2057,15 @@ function exportToExcel() {
     getAllTreffen(y).forEach(t => {
       if (!t.ort || t.ort==='-') return;
       t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(loc => {
-        const l = loc.trim();
-        if (l) allLocs[l] = (allLocs[l]||0)+1;
+        const l = loc.trim(); if (l) allLocs[l] = (allLocs[l]||0)+1;
       });
     });
   });
-  const locRows = [['Location','Besuche gesamt']];
-  Object.entries(allLocs).sort((a,b)=>b[1]-a[1]).forEach(([l,n]) => locRows.push([l,n]));
-  xmlSheets += makeSheet('Locations', locRows);
+  const locRows = [['Location','Besuche gesamt'],
+    ...Object.entries(allLocs).sort((a,b)=>b[1]-a[1])];
+  const wsLoc = makeWS(locRows);
+  wsLoc['!cols'] = [{wch:25},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, wsLoc, 'Locations');
 
   // ── Gäste sheet ─────────────────────────────────────────────────────────
   const guestCount = {};
@@ -2076,34 +2073,19 @@ function exportToExcel() {
     getAllTreffen(y).forEach(t => {
       if (!t.guests || t.guests==='-') return;
       t.guests.split(/,\s*|\s+und\s+/i).forEach(g => {
-        const n = g.trim();
-        if (n) guestCount[n] = (guestCount[n]||0)+1;
+        const n = g.trim(); if (n) guestCount[n] = (guestCount[n]||0)+1;
       });
     });
   });
-  const guestRows = [['Gast','Stammtische besucht']];
-  Object.entries(guestCount).sort((a,b)=>b[1]-a[1]).forEach(([g,n]) => guestRows.push([g,n]));
-  xmlSheets += makeSheet('Gäste', guestRows);
+  const guestRows = [['Gast','Besuche'],
+    ...Object.entries(guestCount).sort((a,b)=>b[1]-a[1])];
+  const wsGuests = makeWS(guestRows);
+  wsGuests['!cols'] = [{wch:20},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, wsGuests, 'Gäste');
 
-  // ── Generate XLSX XML ────────────────────────────────────────────────────
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-  <Styles>
-    <Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#2A5FA8" ss:Pattern="Solid"/><Font ss:Color="#FFFFFF" ss:Bold="1"/></Style>
-    <Style ss:ID="total"><Font ss:Bold="1"/><Interior ss:Color="#EEF2F8" ss:Pattern="Solid"/></Style>
-  </Styles>
-  ${xmlSheets}
-</Workbook>`;
-
-  const blob = new Blob([xml], {type: 'application/vnd.ms-excel;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Stammtisch_Export_${new Date().toISOString().slice(0,10)}.xls`;
-  a.click();
-  URL.revokeObjectURL(url);
+  // ── Download ─────────────────────────────────────────────────────────────
+  const filename = `Stammtisch_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
   showMsg('✅ Excel-Datei wird heruntergeladen!', true);
 }
 
