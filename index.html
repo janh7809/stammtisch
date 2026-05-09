@@ -448,7 +448,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v2.9</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v3.0</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -767,6 +767,8 @@ async function loadFromSupabase() {
     if (locs) localStorage.setItem('st_locations', JSON.stringify(locs));
     const guests = await sbMeta('guests');
     if (guests) localStorage.setItem('st_guests', JSON.stringify(guests));
+    // Clear old unified avatar store to prevent cross-contamination
+    localStorage.removeItem('st_avatars');
     const personAvatars = await sbMeta('person_avatars');
     if (personAvatars) { personAvatarData = personAvatars; localStorage.setItem('st_person_avatars', JSON.stringify(personAvatars)); }
     const locationAvatars = await sbMeta('location_avatars');
@@ -1025,7 +1027,32 @@ function openAvatarEdit(name) {
 function _buildAndOpenAvatarModal(name, typeLabel) {
   document.getElementById('avatarEditName').textContent = `${name} (${typeLabel})`;
 
-  const emojis = Array.from('🧑👨👩🧔👱🧓👴👵😀😎🤓🥸🧐😏🤠🥳🍺🍻🎉🏆⚓🏠🏡🌿🎩🏰📮✨🔨🍕🌱🏔⛷🎯🌟💎');
+  const emojis = [
+    // Personen
+    '🧑','👨','👩','🧔','👱','🧓','👴','👵','🧒','👦','👧','🧑‍🦰','🧑‍🦱','🧑‍🦳','🧑‍🦲',
+    // Gesichter & Stimmungen
+    '😀','😎','🤓','🥸','🧐','😏','🤠','🥳','😄','😂','🤣','😊','🙂','😁','😆',
+    '😍','🤩','😋','😜','🤪','😝','🤗','🤔','🤫','🤭','🥹','😌','😔','😒',
+    // Berufe & Hobbys
+    '🧑‍💻','👨‍💻','🧑‍🍳','👨‍🍳','🧑‍🎤','👨‍🎤','🧑‍🏫','🧑‍🔧','🧑‍⚕️','🧑‍🚒','👮','🕵️','💂','🧑‍🎨',
+    // Sport & Aktivität
+    '⚽','🏀','🏈','⚾','🎾','🏋️','🚴','🏊','⛷️','🤺','🏇','🧗','🏄','🤸',
+    // Trinken & Feiern
+    '🍺','🍻','🥂','🍷','🥃','🍾','🎉','🎊','🎈','🥳','🎂','🍕','🍔','🌮',
+    // Orte & Gebäude  
+    '🏠','🏡','🏰','🏯','⛺','🏕️','🏗️','🏢','⛪','🕌','🕍','⛩️',
+    // Transport & Reise
+    '⚓','🚢','⛵','🚤','🛥️','🚁','✈️','🚀','🚂','🚗','🏍️','🛵',
+    // Natur
+    '🌿','🌱','🌲','🌳','🌴','🍀','🌸','🌺','🌻','🌹','🍄','🌊','⛰️','🗻',
+    // Tiere
+    '🐶','🐱','🐻','🦁','🐯','🦊','🐺','🐴','🦄','🐧','🦅','🦋',
+    // Symbole & Objekte
+    '⭐','🌟','💫','✨','🔥','💥','❄️','🌈','☀️','🌙','💎','👑','🏆','🎯',
+    '🎸','🎵','🎺','🎻','🥁','🎹','🎲','♟️','🃏','🎮','🕹️',
+    // Werkzeug & Diverses
+    '🔨','⚔️','🛡️','🔑','🔮','🧲','💡','📮','✉️','📞','🖥️','⌚',
+  ];
   const emojiButtons = emojis.map(e =>
     `<button onclick="setAvatarEmoji('${e}')" style="font-size:1.4rem;background:none;border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.4rem;cursor:pointer;line-height:1.4">${e}</button>`
   ).join('');
