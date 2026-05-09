@@ -364,6 +364,16 @@
   .reason-btn.sel-unexcused  { background: rgba(201,99,99,0.15);   border-color: var(--danger);  color: var(--danger);  }
   .reason-input { display: none; }
   .reason-input.open { display: block; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0; overflow: hidden;
+    background: var(--surface2); border: 1.5px solid var(--border);
+    vertical-align: middle;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .avatar-lg { width: 44px; height: 44px; font-size: 1.5rem; }
+  .avatar-sm { width: 24px; height: 24px; font-size: 0.85rem; }
   .excused-detail { font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; padding-left: 0.5rem; border-left: 2px solid var(--border); }
   .statuten-collapse { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 0; }
   .statuten-collapse summary { padding: 1rem 1.25rem; cursor: pointer; color: var(--gold); font-weight: 500; list-style: none; display: flex; align-items: center; gap: 0.5rem; }
@@ -427,10 +437,43 @@
   </div>
 </div>
 
+<!-- AVATAR EDITOR MODAL -->
+<div class="modal-backdrop" id="avatarModal">
+  <div class="modal" style="max-width:420px">
+    <h2>Avatar bearbeiten</h2>
+    <div style="text-align:center;margin-bottom:1.25rem">
+      <div id="avatarPreview" style="font-size:3.5rem;width:80px;height:80px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:0.5rem"></div>
+      <div style="font-weight:600;color:var(--text)" id="avatarEditName"></div>
+    </div>
+    <div class="form-row">
+      <label>Emoji auswählen</label>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.75rem">
+        ${'🧑👨👩🧔👱🧓👴👵😀😎🤓🥸🧐😏🤠🥳🍺🍻🎉🏆'.split('').map(e =>
+          `<button onclick="setAvatarEmoji('${e}')" style="font-size:1.4rem;background:none;border:1px solid var(--border);border-radius:6px;padding:0.2rem 0.35rem;cursor:pointer">${e}</button>`
+        ).join('')}
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <input type="text" id="customEmojiInput" placeholder="Eigenes Emoji..." maxlength="2" style="flex:1">
+        <button class="btn-primary" onclick="setAvatarEmojiCustom()" style="padding:0.55rem 0.9rem">OK</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Bild hochladen</label>
+      <input type="file" id="avatarImageInput" accept="image/*" onchange="handleAvatarImage(event)"
+        style="background:var(--surface2);padding:0.5rem;border-radius:8px;border:1px solid var(--border);width:100%">
+    </div>
+    <div class="modal-btns" style="margin-top:1rem">
+      <button class="btn-primary" onclick="saveAvatar()">Speichern</button>
+      <button class="btn-ghost" onclick="document.getElementById('avatarModal').classList.remove('open')">Abbrechen</button>
+      <button class="btn-danger" onclick="clearAvatar()" style="margin-left:auto">Zurücksetzen</button>
+    </div>
+  </div>
+</div>
+
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v2.0</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v2.4</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -698,6 +741,24 @@ let appData = {
   treffen: []
 };
 
+// Avatar data: { memberName: { emoji: '🙂', img: 'data:...' } }
+let avatarData = JSON.parse(localStorage.getItem('st_avatars') || '{}');
+
+function saveAvatars() {
+  localStorage.setItem('st_avatars', JSON.stringify(avatarData));
+  sbSetMeta('avatars', avatarData);
+}
+
+function getAvatar(name, size='') {
+  const a = avatarData[name];
+  const cls = `avatar${size ? ' avatar-'+size : ''}`;
+  if (a && a.img) {
+    return `<span class="${cls}"><img src="${a.img}" alt="${name}"></span>`;
+  }
+  const emoji = (a && a.emoji) ? a.emoji : '🧑';
+  return `<span class="${cls}">${emoji}</span>`;
+}
+
 async function loadFromSupabase() {
   showLoadingBanner(true);
   try {
@@ -716,6 +777,8 @@ async function loadFromSupabase() {
     if (locs) localStorage.setItem('st_locations', JSON.stringify(locs));
     const guests = await sbMeta('guests');
     if (guests) localStorage.setItem('st_guests', JSON.stringify(guests));
+    const avatars = await sbMeta('avatars');
+    if (avatars) { avatarData = avatars; localStorage.setItem('st_avatars', JSON.stringify(avatars)); }
   } catch(e) { console.error('Supabase load error:', e); }
   showLoadingBanner(false);
   renderDashboard();
@@ -942,6 +1005,88 @@ let isAdmin = false;
 let currentDashYear = 2026;
 let currentTreffenYear = 2026;
 
+// ── AVATAR EDITOR ────────────────────────────────────────────────────────────
+let editingAvatar = null;
+let pendingAvatar = {};
+
+function openAvatarEdit(name) {
+  if (!isAdmin) return;
+  editingAvatar = name;
+  pendingAvatar = { ...(avatarData[name] || { emoji: '🧑' }) };
+  document.getElementById('avatarEditName').textContent = name;
+  updateAvatarPreview();
+  document.getElementById('avatarModal').classList.add('open');
+  document.getElementById('customEmojiInput').value = '';
+}
+
+function updateAvatarPreview() {
+  const el = document.getElementById('avatarPreview');
+  if (!el) return;
+  if (pendingAvatar.img) {
+    el.innerHTML = `<img src="${pendingAvatar.img}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    el.innerHTML = pendingAvatar.emoji || '🧑';
+    el.style.fontSize = '3rem';
+  }
+}
+
+function setAvatarEmoji(e) {
+  pendingAvatar = { emoji: e };
+  delete pendingAvatar.img;
+  updateAvatarPreview();
+}
+
+function setAvatarEmojiCustom() {
+  const val = document.getElementById('customEmojiInput').value.trim();
+  if (val) setAvatarEmoji(val);
+}
+
+function handleAvatarImage(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    // Resize to max 200x200 for storage efficiency
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const size = Math.min(img.width, img.height, 200);
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      // Center crop
+      const sx = (img.width - size) / 2, sy = (img.height - size) / 2;
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
+      pendingAvatar = { img: canvas.toDataURL('image/jpeg', 0.8) };
+      delete pendingAvatar.emoji;
+      updateAvatarPreview();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveAvatar() {
+  if (!editingAvatar) return;
+  avatarData[editingAvatar] = { ...pendingAvatar };
+  saveAvatars();
+  document.getElementById('avatarModal').classList.remove('open');
+  renderMemberList();
+  renderDashboard();
+  renderTreffen();
+  showMsg(`Avatar für ${editingAvatar} gespeichert ✓`, true);
+}
+
+function clearAvatar() {
+  if (!editingAvatar) return;
+  delete avatarData[editingAvatar];
+  pendingAvatar = { emoji: '🧑' };
+  saveAvatars();
+  document.getElementById('avatarModal').classList.remove('open');
+  renderMemberList();
+  renderDashboard();
+  showMsg(`Avatar für ${editingAvatar} zurückgesetzt`, true);
+}
+
 function saveData() {
   // Save metadata to Supabase
   sbSetMeta('members', appData.members);
@@ -1058,8 +1203,13 @@ function renderDashboard() {
     <tr>
       <td><span class="rank-badge rank-${i<3?i+1:'other'}" style="width:26px;height:26px;font-size:0.75rem">${i+1}</span></td>
       <td>
-        <div style="font-weight:600;font-size:0.9rem">${r.name}</div>
-        <div class="bar-bg" style="margin-top:4px"><div class="bar-fill" style="width:${(r.pts/maxPts*100).toFixed(0)}%"></div></div>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          ${getAvatar(r.name,'sm')}
+          <div>
+            <div style="font-weight:600;font-size:0.9rem">${r.name}</div>
+            <div class="bar-bg" style="margin-top:3px"><div class="bar-fill" style="width:${(r.pts/maxPts*100).toFixed(0)}%"></div></div>
+          </div>
+        </div>
       </td>
       <td style="font-weight:700;color:var(--gold);font-size:0.95rem">${r.pts}</td>
       <td class="pct-text" style="font-size:0.88rem">${(r.pct*100).toFixed(2)}%</td>
@@ -1084,7 +1234,7 @@ function renderMemberLineChart(treffen, members) {
   if (data.length < 2) { el.innerHTML = ''; return; }
 
   const W = 700, H = 300;
-  const PAD = { t: 20, r: 20, b: 44, l: 40 };
+  const PAD = { t: 20, r: 20, b: 56, l: 40 };
   const cW = W - PAD.l - PAD.r;
   const cH = H - PAD.t - PAD.b;
   const n = data.length;
@@ -1166,30 +1316,33 @@ function renderMemberLineChart(treffen, members) {
   svg += `<path d="${totalLinePath}" fill="none" stroke="rgba(42,95,168,0.95)"
     stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
 
-  // Location pin symbols above dots (small ▲ with tooltip)
-  data.forEach((t,i) => {
-    if (!t.ort || t.ort==='-') return;
-    const x = xPos(i);
-    const y = PAD.t + cH;  // bottom
-    // Small location marker at bottom of chart
-    const d2 = new Date(t.date);
-    const ds = d2.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
-    svg += `<text x="${x}" y="${PAD.t+cH-3}" text-anchor="middle" font-size="7"
-      fill="var(--muted)" opacity="0.5" font-family="DM Sans,sans-serif">
-      <title>📍 ${t.ort} — ${ds}</title>📍</text>`;
-  });
+  // Location emoji map
+  const locEmoji = {
+    'Christoph':'🏠','André':'🏠','Fabian':'🏠','Patrick':'🏠','Jan':'🏠','Klaas':'🏠',
+    'Anker':'⚓','Dannemann':'⚓','Alte Post':'⚓','Castell':'⚓',
+    'Wunderlich':'⚓','Hobel':'⚓','Aposto':'⚓','Gartenfreunde':'⚓',
+    'Bilzhütte':'⚓','Skihütte Oberkochen':'⚓'
+  };
 
-  // Interactive dots on total line
+  // Dots + emoji above each point
   totals.forEach(p => {
     const d2 = new Date(p.date);
     const ds = d2.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
-    svg += `<circle cx="${p.x}" cy="${p.y}" r="5" fill="white"
-      stroke="rgba(42,95,168,0.9)" stroke-width="2.5">
-      <title>${ds} · 📍 ${p.ort} · ${p.cnt}/${members.length} Mitglieder</title>
-    </circle>`;
-    svg += `<circle cx="${p.x}" cy="${p.y}" r="2.5" fill="rgba(42,95,168,0.9)">
-      <title>${ds} · 📍 ${p.ort} · ${p.cnt}/${members.length} Mitglieder</title>
-    </circle>`;
+    const emoji = locEmoji[p.ort] || '📍';
+
+    // Emoji above the dot
+    svg += `<text x="${p.x}" y="${p.y - 10}" text-anchor="middle"
+      font-size="11" font-family="DM Sans,sans-serif" opacity="0.85">${emoji}</text>`;
+
+    // Dot
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="4.5" fill="white"
+      stroke="rgba(42,95,168,0.85)" stroke-width="2"/>`;
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="2" fill="rgba(42,95,168,0.85)"/>`;
+
+    // Date below dot
+    svg += `<text x="${p.x}" y="${p.y + 16}" text-anchor="middle"
+      font-size="8.5" fill="var(--muted)" font-family="DM Sans,sans-serif"
+      opacity="0.75">${ds}</text>`;
   });
 
   svg += `</svg>`;
@@ -1219,7 +1372,7 @@ function renderMemberLineChart(treffen, members) {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin:1.5rem 0 0">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
         <h2 class="section-title" style="margin:0;border:none;padding:0">📈 Teilnahmen im Jahresverlauf</h2>
-        <span style="font-size:0.75rem;color:var(--muted)">📍 Hover für Location & Anzahl</span>
+        
       </div>
       ${svg}
 
@@ -1329,7 +1482,7 @@ function renderExtraStats(treffen, members, stattgefunden) {
         <div class="ec-title">🔥 Längste Teilnahme-Serie</div>
         <div class="ec-winner">🏅 ${streakWinner}</div>
         <div class="ec-sub">${streaks[streakWinner]} Stammtische in Folge</div>
-        <div style="margin-top:0.75rem">${sortedByStreak.map((m,i)=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0;border-bottom:1px solid var(--border)"><span style="font-size:0.75rem;color:var(--muted);min-width:16px">${i+1}.</span><span style="flex:1;font-size:0.85rem">${m}</span><span style="color:var(--gold2);font-weight:500">${streaks[m]}×</span></div>`).join('')}</div>
+        <div style="margin-top:0.75rem">${sortedByStreak.map((m,i)=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0;border-bottom:1px solid var(--border)"><span style="font-size:0.75rem;color:var(--muted);min-width:16px">${i+1}.</span>${getAvatar(m,'sm')}<span style="flex:1;font-size:0.85rem">${m}</span><span style="color:var(--gold2);font-weight:500">${streaks[m]}×</span></div>`).join('')}</div>
       </div>
       <div class="extra-card">
         <div class="ec-title">📍 Meistbesuchte Location</div>
@@ -1418,7 +1571,7 @@ function renderTreffen() {
       const v = t.attendance[m] ?? 0;
       const cls = v===1?'present':v===0.5?'half':'absent';
       const icon = v===1?'✓':v===0.5?'½':'✗';
-      return `<span class="dot ${cls}">${icon} ${m}</span>`;
+      return `<span class="dot ${cls}">${getAvatar(m,'sm')} ${icon} ${m}</span>`;
     }).join('');
 
     return `<div class="treffen-card" onclick="toggleTreffen(${idx})">
@@ -1577,6 +1730,7 @@ function renderOverall() {
     const items = ranked.slice(0,3).map(([name,pts],i) => `
       <div class="podium-item">
         <span class="rank-badge rank-${i+1}" style="min-width:28px">${i+1}</span>
+        ${getAvatar(name,'sm')}
         <span class="name">${name}</span>
         <span class="pts">${pts}</span>
       </div>`).join('');
@@ -1654,6 +1808,7 @@ function renderOverall() {
         return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0.85rem 1rem">
           <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem">
             ${rankBadge}
+            ${getAvatar(m)}
             <span style="font-weight:700;font-size:1rem;flex:1">${m}</span>
             <span style="font-size:1.1rem;font-weight:800;color:var(--gold)">${total}</span>
             <span style="font-size:0.75rem;color:var(--muted);margin-left:2px">Teiln.</span>
@@ -1867,9 +2022,14 @@ function renderMemberList() {
   const el = document.getElementById('memberList');
   if (!el) return;
   el.innerHTML = appData.members.map((m,i) => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--border)">
-      <span>${m}</span>
-      <button class="btn-danger" onclick="removeMember(${i})">Entfernen</button>
+    <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+      <div onclick="openAvatarEdit('${m}')" style="cursor:pointer;position:relative">
+        ${getAvatar(m)}
+        <span style="position:absolute;bottom:-2px;right:-2px;font-size:0.6rem;background:var(--gold);color:white;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center">✏</span>
+      </div>
+      <span style="flex:1;font-weight:500">${m}</span>
+      <button class="att-btn" style="color:var(--gold);border-color:rgba(42,95,168,0.3);font-size:0.75rem" onclick="openAvatarEdit('${m}')">✏ Avatar</button>
+      <button class="btn-danger" style="padding:0.3rem 0.5rem;font-size:0.8rem" onclick="removeMember(${i})">×</button>
     </div>`).join('');
 }
 
