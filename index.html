@@ -236,7 +236,23 @@
   .statut-num { color: var(--gold); font-weight: 700; min-width: 24px; }
 
   /* ADMIN */
-  .admin-section { max-width: 700px; }
+  .admin-section { max-width: 700px; width: 100%; }
+  @media (max-width: 600px) {
+    .admin-card { padding: 1rem; }
+    .admin-card h3 { font-size: 1rem; margin-bottom: 1rem; }
+    .attendance-grid { grid-template-columns: 1fr !important; }
+    .attendance-btns { gap: 0.25rem; }
+    .att-btn { padding: 0.4rem 0.5rem; font-size: 0.78rem; }
+    .member-row { padding: 0.6rem 0.75rem; }
+    .absence-reason { padding: 0.5rem; }
+    .reason-btns { flex-direction: column; gap: 0.35rem; }
+    .reason-btn { width: 100%; text-align: center; padding: 0.5rem; font-size: 0.82rem; }
+    .combo-wrap input { font-size: 0.88rem; }
+    #editTreffenList > div { flex-wrap: wrap; gap: 0.4rem; }
+    .form-row label { font-size: 0.82rem; }
+    .admin-section .btn-primary { width: 100%; }
+    .overall-grid { grid-template-columns: 1fr !important; }
+  }
   .admin-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem;
@@ -413,7 +429,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v1.4</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v1.5</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -560,7 +576,7 @@
     </div>
     <div class="admin-card">
       <h3>Locations &amp; Gäste verwalten</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.5rem">
 
         <!-- LOCATIONS -->
         <div>
@@ -596,6 +612,12 @@
         </div>
         <div style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem">⚠ Wird rückwirkend in allen Treffen angepasst</div>
       </div>
+    </div>
+
+    <div class="admin-card">
+      <h3>📥 Excel-Export</h3>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Exportiert alle Stammtisch-Daten als Excel-Datei mit separaten Reitern pro Jahr plus einem Gesamt-Überblick.</p>
+      <button class="btn-primary" onclick="exportToExcel()" style="width:100%">📥 Excel herunterladen</button>
     </div>
 
     <div class="admin-card">
@@ -869,7 +891,7 @@ const historicalData = {
       {date:"2025-08-28",ort:"Oli",guests:"-",attendance:{Christoph:1.0,Patrick:0.0,Fabian:0.0,André:1.0,Jan:1.0,Oliver:1.0},excuse:"Patrick hat sich entschuldigt mit der Begrüdnung \"Wöllstein schaffe ich zeitlich nicht\"\nFabian hat sich entschuldigt mit der Begründung \"bin im Urlaub\"",note:""},
       {date:"2025-09-04",ort:"Jan",guests:"Alexander",attendance:{Christoph:1.0,Patrick:0.0,Fabian:0.0,André:1.0,Jan:1.0,Oliver:1.0},excuse:"Fabian hat sich entschuldigt mit der Begründung \"bin im Urlaub\"\nPatrick hat sich entschuldigt mit der Begründung \"Urlaub\"",note:""},
       {date:"2025-09-11",ort:"Jan",guests:"-",attendance:{Christoph:0.0,Patrick:0.0,Fabian:1.0,André:0.0,Jan:1.0,Oliver:0.0},excuse:"André hat sich entschuldigt mit der Begründung \"Urlaub\"\nChristoph hat sich entschuldigt mit der Begründung \"Urlaub\"\nOliver hat sich entschuldigt mit der Begründung \"Frühschicht\"\nPatrick hat sich nicht entschuldigt und somit auch keine Begründung abgegeben",note:""},
-      {date:"2025-09-18",ort:"Anker",guests:"Alexander, Giuseppe",attendance:{Christoph:1.0,Patrick:1.0,Fabian:1.0,André:1.0,Jan:1.0,Oliver:0.5},excuse:"",note:"Peter aus Hawaii war da. Ein ploynesischer Halbgott, welcher stark betrunken war.\nOliver kam nach 21:30 Uhr, daher erhält er nur 0,5 Punkte"},
+      {date:"2025-09-18",ort:"Anker",guests:"Alexander, Giuseppe",attendance:{Christoph:1.0,Patrick:1.0,Fabian:1.0,André:1.0,Jan:1.0,Oliver:0.5},excuse:"",note:"Peter aus Hawaii war da. Ein ploynesischer Halbgott, welcher stark betrunken war.\nOliver kam nach 21:30 Uhr, daher erhält er nur 0,5 Teilnahmen"},
       {date:"2025-09-25",ort:"Anker",guests:"-",attendance:{Christoph:1.0,Patrick:1.0,Fabian:1.0,André:0.5,Jan:0.0,Oliver:0.0},excuse:"Oliver hat sich entschuldigt mit der Begründung \"Hab Frühschicht\"\nJan hat sich entschuldigt mit der Begründung \"Fahren über ein langes Wochenende weg\"",note:""},
       {date:"2025-10-02",ort:"Christoph",guests:"-",attendance:{Christoph:1.0,Patrick:1.0,Fabian:0.0,André:1.0,Jan:0.0,Oliver:0.0},excuse:"Feyle hat angeboten den Stammtisch bei sich zu machen da Miri nicht da ist, er hat dann aber beim Haddai stattgefunden\nOliver hat sich entschuldigt mit der Begründung \"Muss auf Anni aufpassen\"\nJan hat sich entschuldigt mit der Begrndung \" Bin mit den Rhinos saufen\"",note:""},
       {date:"2025-10-09",ort:"Anker",guests:"-",attendance:{Christoph:1.0,Patrick:0.0,Fabian:0.0,André:1.0,Jan:1.0,Oliver:0.0},excuse:"Patrick hat sich nicht entschuldigt und somit auch keine Begründung angegeben\nFabian hat sich entschuldigt mit der Begründung \"krank\"\nOliver hat sich entschuldigt mit der Begründung \"Bin krank und hab Frühschicht\"",note:""},
@@ -1029,7 +1051,7 @@ function renderDashboard() {
 
   const table = document.getElementById('rankingTable');
   table.innerHTML = `<thead><tr>
-    <th style="width:36px">#</th><th>Mitglied</th><th style="width:54px">Pkt</th><th>Quote</th>
+    <th style="width:36px">#</th><th>Mitglied</th><th style="width:54px">Teiln.</th><th>Quote</th>
   </tr></thead><tbody>${ranked.map((r,i)=>`
     <tr>
       <td><span class="rank-badge rank-${i<3?i+1:'other'}" style="width:26px;height:26px;font-size:0.75rem">${i+1}</span></td>
@@ -1253,7 +1275,7 @@ function renderTreffen() {
         </div>
         <div class="treffen-score">
           <div class="num">${total}</div>
-          <div class="label">Punkte</div>
+          <div class="label">Teilnahmen</div>
         </div>
       </div>
       <div class="attendance-dots">${dots}</div>
@@ -1388,7 +1410,7 @@ function renderOverall() {
     return `<tr>
       <td style="font-weight:600;color:var(--text);white-space:nowrap">${rankBadge}${m}</td>
       ${cells}
-      <td style="font-weight:700;color:var(--gold2);white-space:nowrap">${total} <span style="color:var(--muted);font-size:0.8rem">Pkt.</span></td>
+      <td style="font-weight:700;color:var(--gold2);white-space:nowrap">${total} <span style="color:var(--muted);font-size:0.8rem">Teiln.</span></td>
     </tr>`;
   }).join('');
 
@@ -1479,7 +1501,7 @@ function renderOverall() {
             ${rankBadge}
             <span style="font-weight:700;font-size:1rem;flex:1">${m}</span>
             <span style="font-size:1.1rem;font-weight:800;color:var(--gold)">${total}</span>
-            <span style="font-size:0.75rem;color:var(--muted);margin-left:2px">Pkt.</span>
+            <span style="font-size:0.75rem;color:var(--muted);margin-left:2px">Teiln.</span>
           </div>
           <div class="bar-bg" style="margin-bottom:0.6rem"><div class="bar-fill" style="width:${(total/maxTotal*100).toFixed(0)}%"></div></div>
           <div style="display:flex;gap:0.5rem;justify-content:space-between">${yearCells}</div>
@@ -1951,6 +1973,139 @@ function comboKey(e, key) {
 
 // Patch saveTreffen to read guest tags
 const _origSaveTreffen = saveTreffen;
+
+// ============================================================
+// EXCEL EXPORT
+// ============================================================
+function exportToExcel() {
+  const years = [2023, 2024, 2025, 2026];
+  const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
+  const months = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+
+  // Build CSV content for each sheet, then combine as a zip-less multi-sheet
+  // Use SheetJS-style but pure — we'll generate an XLSX manually via a data URI
+  // Since SheetJS isn't loaded, use a CSV download per year instead — simpler & reliable
+
+  // Actually: build an HTML table file with multiple sheets using XLSX mime type
+  // The cleanest approach without a library: generate a proper XLSX using base64
+
+  // We'll use the Blob + multiple CSV approach — one file per year + overall
+  // But user wants one file → use a simple HTML→XLS trick (opens in Excel with tabs)
+
+  let xmlSheets = '';
+  let xmlWorksheet = '';
+
+  function cellVal(v) {
+    if (v === null || v === undefined || v === '' || v === '-') return '<Cell><Data ss:Type="String">-</Data></Cell>';
+    if (typeof v === 'number') return `<Cell><Data ss:Type="Number">${v}</Data></Cell>`;
+    return `<Cell><Data ss:Type="String">${String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}</Data></Cell>`;
+  }
+
+  function makeSheet(name, rows) {
+    let xml = `<Worksheet ss:Name="${name.replace(/[^a-zA-Z0-9 ]/g,'').substring(0,31)}"><Table>`;
+    rows.forEach(row => {
+      xml += '<Row>' + row.map(cellVal).join('') + '</Row>';
+    });
+    xml += '</Table></Worksheet>';
+    return xml;
+  }
+
+  // ── Per-year sheets ──────────────────────────────────────────────────────
+  years.forEach(year => {
+    const hist = historicalData[year];
+    const treffen = getAllTreffen(year).sort((a,b) => new Date(a.date)-new Date(b.date));
+    const mems = hist ? hist.members : members;
+
+    const header = ['Datum','Wochentag','Ort','Gäste', ...mems.map(m=>`${m} (Teilnahme)`), 'Anwesende gesamt','Entschuldigung & Begründung','Bemerkungen'];
+    const rows = [header];
+
+    treffen.forEach(t => {
+      const d = new Date(t.date);
+      const weekday = ['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()];
+      const total = mems.reduce((s,m) => s + (t.attendance[m]||0), 0);
+      rows.push([
+        t.date, weekday, t.ort||'-', t.guests||'-',
+        ...mems.map(m => t.attendance[m] ?? 0),
+        total, t.excuse||'', t.note||''
+      ]);
+    });
+
+    // Totals row
+    const totalsRow = ['GESAMT','','','', ...mems.map(m => {
+      return treffen.reduce((s,t) => s+(t.attendance[m]||0), 0);
+    }), '', '', ''];
+    rows.push(totalsRow);
+
+    xmlSheets += makeSheet(`${year}`, rows);
+  });
+
+  // ── Overall sheet ────────────────────────────────────────────────────────
+  const overallHeader = ['Mitglied', ...years.map(y=>`${y} Teilnahmen`), ...years.map(y=>`${y} %`), 'Gesamt'];
+  const overallRows = [overallHeader];
+  members.forEach(m => {
+    const yearPts = years.map(y => (historicalData[y]?.totals[m]||0));
+    const yearPct = years.map(y => {
+      const hist = historicalData[y];
+      const pts = hist?.totals[m]||0;
+      const maxP = hist?.maxPossible||50;
+      return Math.round(pts/maxP*100) + '%';
+    });
+    const total = yearPts.reduce((a,b)=>a+b,0);
+    overallRows.push([m, ...yearPts, ...yearPct, total]);
+  });
+  xmlSheets += makeSheet('Overall', overallRows);
+
+  // ── Locations sheet ──────────────────────────────────────────────────────
+  const allLocs = {};
+  years.forEach(y => {
+    getAllTreffen(y).forEach(t => {
+      if (!t.ort || t.ort==='-') return;
+      t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(loc => {
+        const l = loc.trim();
+        if (l) allLocs[l] = (allLocs[l]||0)+1;
+      });
+    });
+  });
+  const locRows = [['Location','Besuche gesamt']];
+  Object.entries(allLocs).sort((a,b)=>b[1]-a[1]).forEach(([l,n]) => locRows.push([l,n]));
+  xmlSheets += makeSheet('Locations', locRows);
+
+  // ── Gäste sheet ─────────────────────────────────────────────────────────
+  const guestCount = {};
+  years.forEach(y => {
+    getAllTreffen(y).forEach(t => {
+      if (!t.guests || t.guests==='-') return;
+      t.guests.split(/,\s*|\s+und\s+/i).forEach(g => {
+        const n = g.trim();
+        if (n) guestCount[n] = (guestCount[n]||0)+1;
+      });
+    });
+  });
+  const guestRows = [['Gast','Stammtische besucht']];
+  Object.entries(guestCount).sort((a,b)=>b[1]-a[1]).forEach(([g,n]) => guestRows.push([g,n]));
+  xmlSheets += makeSheet('Gäste', guestRows);
+
+  // ── Generate XLSX XML ────────────────────────────────────────────────────
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Styles>
+    <Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#2A5FA8" ss:Pattern="Solid"/><Font ss:Color="#FFFFFF" ss:Bold="1"/></Style>
+    <Style ss:ID="total"><Font ss:Bold="1"/><Interior ss:Color="#EEF2F8" ss:Pattern="Solid"/></Style>
+  </Styles>
+  ${xmlSheets}
+</Workbook>`;
+
+  const blob = new Blob([xml], {type: 'application/vnd.ms-excel;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Stammtisch_Export_${new Date().toISOString().slice(0,10)}.xls`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showMsg('✅ Excel-Datei wird heruntergeladen!', true);
+}
 
 // ============================================================
 // MANAGE LOCATIONS & GUESTS
