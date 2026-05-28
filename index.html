@@ -458,7 +458,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v3.6</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v3.7</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -1775,50 +1775,50 @@ function renderTreffen() {
       });
     }
 
-    // ── Table rows: members then guests ──────────────────────────────────
-    function statusCell(name, val, isMember) {
-      const isHalf = val === 0.5;
-      if (val > 0) {
-        const label = isHalf
-          ? '<span style="color:var(--gold);font-weight:600">½ Spät</span>'
-          : '<span style="color:var(--success);font-weight:600">✓ Da</span>';
-        return `<td style="padding:0.3rem 0.5rem;vertical-align:middle">${label}</td><td style="padding:0.3rem 0.5rem;font-size:0.8rem;color:var(--muted)"></td>`;
-      } else {
-        const cat = excuseCategory[name] || '';
-        const reason = excuseByMember[name] || '';
-        let badge = '', reasonTxt = '';
-        if (cat === 'ok')         { badge = '<span style="color:var(--success);font-weight:600;font-size:0.82rem">✅ Entsch.</span>'; reasonTxt = reason; }
-        else if (cat==='no-reason'){ badge = '<span style="color:var(--gold);font-weight:600;font-size:0.82rem">〜 Entsch.</span>'; reasonTxt = 'Keine Begründung'; }
-        else if (cat==='unexcused'){ badge = '<span style="color:var(--danger);font-weight:600;font-size:0.82rem">⚠ Unentsch.</span>'; reasonTxt = ''; }
-        else                       { badge = '<span style="color:var(--danger);font-weight:600;font-size:0.82rem">✗ Weg</span>'; reasonTxt = ''; }
-        return `<td style="padding:0.3rem 0.5rem;vertical-align:middle">${badge}</td><td style="padding:0.3rem 0.5rem;font-size:0.8rem;color:var(--muted);vertical-align:middle">${reasonTxt}</td>`;
-      }
+    // ── Badge helper ─────────────────────────────────────────────────────
+    function badge(text, color, bg, border) {
+      return `<span style="display:inline-block;font-size:11px;font-weight:500;padding:2px 7px;border-radius:20px;white-space:nowrap;background:${bg};color:${color};border:0.5px solid ${border}">${text}</span>`;
     }
 
+    function statusBadge(name, val) {
+      if (val === 1)   return badge('✓ Anwesend', '#27500A', '#EAF3DE', '#97C459');
+      if (val === 0.5) return badge('½ Spät',     '#633806', '#FAEEDA', '#EF9F27');
+      const cat = excuseCategory[name] || '';
+      if (cat === 'ok')          return badge('✅ Entsch.',  '#27500A', '#EAF3DE', '#97C459');
+      if (cat === 'no-reason')   return badge('〜 Entsch.',  '#633806', '#FAEEDA', '#EF9F27');
+      if (cat === 'unexcused')   return badge('⚠ Unentsch.','#791F1F', '#FCEBEB', '#F09595');
+      return badge('✗ Fehlt', '#5F5E5A', 'var(--surface2)', 'var(--border)');
+    }
+
+    // ── Member table rows ─────────────────────────────────────────────────
     const memberRows = members.map(m => {
       const val = t.attendance[m] ?? 0;
+      const reason = excuseByMember[m] || '';
       return `<tr style="border-bottom:0.5px solid var(--border)">
-        <td style="padding:0.35rem 0.5rem;vertical-align:middle;width:36px">${getAvatar(m,'sm')}</td>
-        <td style="padding:0.35rem 0.5rem;font-weight:500;font-size:0.88rem;vertical-align:middle;white-space:nowrap">${m}</td>
-        ${statusCell(m, val, true)}
+        <td style="padding:5px 8px;vertical-align:middle;width:30px">${getAvatar(m,'sm')}</td>
+        <td style="padding:5px 8px;font-size:13px;font-weight:500;vertical-align:middle;white-space:nowrap">${m}</td>
+        <td style="padding:5px 8px;vertical-align:middle;white-space:nowrap">${statusBadge(m,val)}</td>
+        <td style="padding:5px 8px;font-size:11px;color:var(--muted);vertical-align:middle">${reason}</td>
       </tr>`;
     }).join('');
 
+    // ── Guest rows ────────────────────────────────────────────────────────
     const guestList = t.guests && t.guests !== '-'
       ? t.guests.split(/,\s*/).map(g=>g.trim()).filter(Boolean) : [];
 
-    const guestRows = guestList.length ? `
-      <tr style="border-top:2px solid var(--border)">
-        <td colspan="4" style="padding:0.3rem 0.5rem;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Gäste</td>
+    const guestSection = guestList.length ? `
+      <tr>
+        <td colspan="4" style="padding:4px 8px 2px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);border-top:1.5px solid var(--border);border-bottom:0.5px solid var(--border)">Gäste</td>
       </tr>
       ${guestList.map(g => `<tr style="border-bottom:0.5px solid var(--border)">
-        <td style="padding:0.3rem 0.5rem;vertical-align:middle">${getAvatar(g,'sm')}</td>
-        <td style="padding:0.3rem 0.5rem;font-size:0.88rem;color:var(--muted);vertical-align:middle" colspan="3">${g}</td>
+        <td style="padding:5px 8px;vertical-align:middle">${getAvatar(g,'sm')}</td>
+        <td style="padding:5px 8px;font-size:13px;color:var(--muted);vertical-align:middle">${g}</td>
+        <td style="padding:5px 8px" colspan="2">${badge('Gast','#0C447C','#E6F1FB','#85B7EB')}</td>
       </tr>`).join('')}` : '';
 
     const noteRow = t.note ? `
-      <div style="margin-top:0.6rem;padding:0.45rem 0.65rem;background:var(--surface2);border-radius:6px;border-left:3px solid var(--gold);font-size:0.83rem;color:var(--text)">
-        <span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--gold);display:block;margin-bottom:0.15rem">📝 Bemerkung</span>
+      <div style="margin-top:8px;padding:6px 10px;background:var(--surface2);border-left:2px solid var(--gold);border-radius:0;font-size:12px;color:var(--text)">
+        <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--gold);display:block;margin-bottom:2px">📝 Bemerkung</span>
         ${t.note}
       </div>` : '';
 
@@ -1832,18 +1832,26 @@ function renderTreffen() {
 
     return `<div class="treffen-card">
       ${ausgefallen ? '<div class="ausgefallen-banner">⚠ Ausgefallen</div>' : ''}
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.75rem">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
         <div>
           <div class="treffen-date">${dateStr}</div>
-          <div class="treffen-ort" style="margin-top:0.25rem">${getLocationAvatar(t.ort||'','sm')} ${t.ort && t.ort!=='-' ? t.ort : 'Kein Ort'}</div>
+          <div class="treffen-ort" style="margin-top:3px">${getLocationAvatar(t.ort||'','sm')} ${t.ort && t.ort!=='-' ? t.ort : 'Kein Ort'}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:1.4rem;font-weight:700;color:var(--gold)">${total}</div>
-          <div style="font-size:0.72rem;color:var(--muted)">/ ${members.length}</div>
+          <div style="font-size:1.4rem;font-weight:700;color:var(--gold);line-height:1">${total}</div>
+          <div style="font-size:11px;color:var(--muted)">von ${members.length}</div>
         </div>
       </div>
-      <table style="width:100%;border-collapse:collapse;border:0.5px solid var(--border);border-radius:8px;overflow:hidden">
-        ${memberRows}${guestRows}
+      <table style="width:100%;border-collapse:collapse;border:0.5px solid var(--border);border-radius:8px;overflow:hidden;table-layout:fixed">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="width:30px;padding:4px 8px;border-bottom:0.5px solid var(--border)"></th>
+            <th style="padding:4px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;border-bottom:0.5px solid var(--border);width:28%">Mitglied</th>
+            <th style="padding:4px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;border-bottom:0.5px solid var(--border);width:30%">Status</th>
+            <th style="padding:4px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;border-bottom:0.5px solid var(--border)">Begründung</th>
+          </tr>
+        </thead>
+        <tbody>${memberRows}${guestSection}</tbody>
       </table>
       ${noteRow}
       ${adminBar}
