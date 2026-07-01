@@ -458,7 +458,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v3.7</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.0</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -717,7 +717,10 @@ async function loadFromSupabase() {
   try {
     // Load custom treffen
     const rows = await sbGet('treffen', 'order=date.asc');
-    appData.treffen = rows.map(r => ({
+    // Deduplicate by date — keep the last (most recently inserted) row per date
+    const seen = new Map();
+    rows.forEach(r => seen.set(r.date, r));
+    appData.treffen = Array.from(seen.values()).map(r => ({
       date: r.date, ort: r.ort, guests: r.guests,
       attendance: r.attendance || {}, excuse: r.excuse || '', note: r.note || ''
     }));
@@ -959,6 +962,16 @@ const historicalData = {
 };
 
 let isAdmin = false;
+
+function restoreAdminSession() {
+  if (sessionStorage.getItem('st_admin') === 'true') {
+    isAdmin = true;
+    document.getElementById('adminBadge').style.display = 'inline';
+    document.getElementById('loginBtn').textContent = 'Abmelden';
+    document.getElementById('loginBtn').onclick = doLogout;
+    document.getElementById('bnav-admin').style.display = '';
+  }
+}
 let currentDashYear = 2026;
 let currentTreffenYear = 2026;
 
@@ -1302,7 +1315,7 @@ function renderDashboard() {
 
   const table = document.getElementById('rankingTable');
   table.innerHTML = `<thead><tr>
-    <th style="width:36px">#</th><th>Mitglied</th><th style="width:54px">Teiln.</th><th>Quote</th>
+    <th style="width:36px">#</th><th>Mitglied</th><th style="width:58px;white-space:nowrap">Teiln.</th><th style="width:68px;white-space:nowrap;text-align:right">Quote</th>
   </tr></thead><tbody>${ranked.map((r,i)=>`
     <tr>
       <td><span class="rank-badge rank-${i<3?i+1:'other'}" style="width:26px;height:26px;font-size:0.75rem">${i+1}</span></td>
@@ -1311,12 +1324,12 @@ function renderDashboard() {
           ${getAvatar(r.name,'sm')}
           <div>
             <div style="font-weight:600;font-size:0.9rem">${r.name}</div>
-            <div class="bar-bg" style="margin-top:3px"><div class="bar-fill" style="width:${(r.pts/maxPts*100).toFixed(0)}%"></div></div>
+            
           </div>
         </div>
       </td>
       <td style="font-weight:700;color:var(--gold);font-size:0.95rem">${r.pts}</td>
-      <td class="pct-text" style="font-size:0.88rem">${(r.pct*100).toFixed(2)}%</td>
+      <td class="pct-text" style="font-size:0.88rem;text-align:right">${(r.pct*100).toFixed(2)}%</td>
     </tr>`).join('')}</tbody>`;
 
   renderExtraStats(treffen, members, stattgefunden);
@@ -1782,10 +1795,10 @@ function renderTreffen() {
 
     function statusBadge(name, val) {
       if (val === 1)   return badge('✓ Anwesend', '#27500A', '#EAF3DE', '#97C459');
-      if (val === 0.5) return badge('½ Spät',     '#633806', '#FAEEDA', '#EF9F27');
+      if (val === 0.5) return badge('½ Spät',     '#3B6D11', '#C0DD97', '#639922');
       const cat = excuseCategory[name] || '';
-      if (cat === 'ok')          return badge('✅ Entsch.',  '#27500A', '#EAF3DE', '#97C459');
-      if (cat === 'no-reason')   return badge('〜 Entsch.',  '#633806', '#FAEEDA', '#EF9F27');
+      if (cat === 'ok')          return badge('✅ Entsch.',  '#7A3800', '#FFE4CC', '#E07020');
+      if (cat === 'no-reason')   return badge('〜 Entsch.',  '#7A3800', '#FFE4CC', '#E07020');
       if (cat === 'unexcused')   return badge('⚠ Unentsch.','#791F1F', '#FCEBEB', '#F09595');
       return badge('✗ Fehlt', '#5F5E5A', 'var(--surface2)', 'var(--border)');
     }
@@ -2372,6 +2385,7 @@ function doLogin() {
   const pw = document.getElementById('pwInput').value;
   if (pw === ADMIN_PW) {
     isAdmin = true;
+    sessionStorage.setItem('st_admin', 'true');
     document.getElementById('adminBadge').style.display = 'inline';
     document.getElementById('loginBtn').textContent = 'Abmelden';
     document.getElementById('loginBtn').onclick = doLogout;
@@ -2384,6 +2398,7 @@ function doLogin() {
 }
 function doLogout() {
   isAdmin = false;
+  sessionStorage.removeItem('st_admin');
   document.getElementById('adminBadge').style.display = 'none';
   document.getElementById('loginBtn').textContent = 'Anmelden';
   document.getElementById('loginBtn').onclick = openLogin;
@@ -2940,6 +2955,7 @@ function deleteFromAdmin(date) {
 
 // INIT
 loadFromSupabase();
+restoreAdminSession();
 </script>
 </body>
 </html>
