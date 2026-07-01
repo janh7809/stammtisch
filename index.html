@@ -458,7 +458,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.1</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.2</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -1794,13 +1794,13 @@ function renderTreffen() {
     }
 
     function statusBadge(name, val) {
-      if (val === 1)   return badge('Anwesend',                        '#27500A', '#EAF3DE', '#97C459');
-      if (val === 0.5) return badge('Anwesend / zu spät',              '#3B6D11', '#C0DD97', '#639922');
+      if (val === 1)   return badge('Anwesend',                        '#166534', '#dcfce7', '#86efac');
+      if (val === 0.5) return badge('Anwesend / zu spät',              '#3f6212', '#ecfccb', '#bef264');
       const cat = excuseCategory[name] || '';
-      if (cat === 'ok')        return badge('Abwesend / entsch. m. Begr.', '#7A3800', '#FFE4CC', '#E07020');
-      if (cat === 'no-reason') return badge('Abwesend / entsch. o. Begr.', '#5A2800', '#FFCF99', '#C05010');
-      if (cat === 'unexcused') return badge('Abwesend / unentschuldigt',    '#791F1F', '#FCEBEB', '#F09595');
-      return badge('Abwesend',                                          '#5F5E5A', 'var(--surface2)', 'var(--border)');
+      if (cat === 'ok')        return badge('Abwesend / entsch. m. Begr.', '#854d0e', '#fef9c3', '#fde047');
+      if (cat === 'no-reason') return badge('Abwesend / entsch. o. Begr.', '#9a3412', '#ffedd5', '#fdba74');
+      if (cat === 'unexcused') return badge('Abwesend / unentschuldigt',    '#7f1d1d', '#fee2e2', '#fca5a5');
+      return badge('Abwesend / unbekannt',                              '#374151', '#f3f4f6', '#d1d5db');
     }
 
     // ── Member table rows ─────────────────────────────────────────────────
