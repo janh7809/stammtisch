@@ -458,7 +458,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.2</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.4</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -1258,22 +1258,18 @@ function getAllTreffen(year) {
 
 function getYearStats(year) {
   const hist = historicalData[year];
+  // getAllTreffen already deduplicates: Supabase overrides historical for same date
   const treffen = getAllTreffen(year);
   const members = hist ? hist.members : appData.members;
   const maxP = hist ? hist.maxPossible : 50;
 
-  // Totals from historical (authoritative) + any custom additions
-  let totals = {};
-  if (hist) {
-    totals = {...hist.totals};
-    // add custom treffen points
-    appData.treffen.filter(t => new Date(t.date).getFullYear() === year).forEach(t => {
-      members.forEach(m => { totals[m] = (totals[m]||0) + (t.attendance[m]||0); });
-    });
-  } else {
-    members.forEach(m => totals[m] = 0);
-    treffen.forEach(t => { members.forEach(m => { totals[m] = (totals[m]||0) + (t.attendance[m]||0); }); });
-  }
+  // Always recompute totals from the deduplicated treffen list
+  // This ensures edited treffen don't get double-counted
+  const totals = {};
+  members.forEach(m => totals[m] = 0);
+  treffen.forEach(t => {
+    members.forEach(m => { totals[m] = (totals[m]||0) + (t.attendance[m]||0); });
+  });
 
   const ausgefallen = treffen.filter(t => t.ort === '-' || !t.ort || Object.values(t.attendance).every(v=>v===0)).length;
   const stattgefunden = treffen.length - ausgefallen;
@@ -1962,12 +1958,12 @@ function renderOverall() {
   const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
 
   // Compute totals per member across all years
+  // Use getYearStats which includes both historical + custom Supabase treffen
+  const yearStats = {};
+  years.forEach(y => { yearStats[y] = getYearStats(y); });
   const grandTotals = {};
   members.forEach(m => {
-    grandTotals[m] = years.reduce((sum, y) => {
-      const hist = historicalData[y];
-      return sum + (hist ? (hist.totals[m]||0) : 0);
-    }, 0);
+    grandTotals[m] = years.reduce((sum, y) => sum + (yearStats[y].totals[m]||0), 0);
   });
   const sortedMembers = [...members].sort((a,b) => grandTotals[b] - grandTotals[a]);
 
@@ -1993,9 +1989,9 @@ function renderOverall() {
 
   // Podium per year
   const podiums = years.map(y => {
+    const ys = yearStats[y];
+    const ranked = Object.entries(ys.totals).sort((a,b)=>b[1]-a[1]);
     const hist = historicalData[y];
-    if (!hist) return '';
-    const ranked = Object.entries(hist.totals).sort((a,b)=>b[1]-a[1]);
     const items = ranked.slice(0,3).map(([name,pts],i) => `
       <div class="podium-item">
         <span class="rank-badge rank-${i+1}" style="min-width:28px">${i+1}</span>
@@ -2065,8 +2061,9 @@ function renderOverall() {
           : `<span class="rank-badge rank-other" style="width:28px;height:28px;font-size:0.8rem;flex-shrink:0">${rank+1}</span>`;
         const yearCells = years.map(y => {
           const hist = historicalData[y];
-          const pts = hist ? (hist.totals[m]||0) : 0;
-          const maxP = hist ? hist.maxPossible : 50;
+          const ys = yearStats[y];
+          const pts = ys ? (ys.totals[m]||0) : 0;
+          const maxP = ys ? ys.maxP : 50;
           const pct = (pts/maxP*100).toFixed(0);
           return `<div style="text-align:center;min-width:48px">
             <div style="font-size:0.75rem;color:var(--muted)">${y}</div>
@@ -2623,10 +2620,10 @@ function exportToExcel() {
   // ── Overall sheet ────────────────────────────────────────────────────────
   const overallRows = [['Mitglied', ...years.map(y=>`${y} Teiln.`), ...years.map(y=>`${y} %`), 'Gesamt']];
   members.forEach(m => {
-    const pts = years.map(y => historicalData[y]?.totals[m]||0);
+    const pts = years.map(y => getYearStats(y).totals[m]||0);
     const pcts = years.map(y => {
-      const h = historicalData[y];
-      return h ? Math.round((h.totals[m]||0)/h.maxPossible*100)+'%' : '-';
+      const ys = getYearStats(y);
+      return ys ? Math.round((ys.totals[m]||0)/ys.maxP*100)+'%' : '-';
     });
     overallRows.push([m, ...pts, ...pcts, pts.reduce((a,b)=>a+b,0)]);
   });
