@@ -458,7 +458,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.5</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.6</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -1838,8 +1838,8 @@ function renderTreffen() {
       <div style="display:flex;gap:0.5rem;margin-top:0.65rem;padding-top:0.6rem;border-top:1px solid var(--border)">
         <button class="btn-primary" style="flex:1;padding:0.4rem;font-size:0.82rem"
           onclick="openEditForm('${t.date}');event.stopPropagation()">✏ Bearbeiten</button>
-        <button class="btn-danger" style="padding:0.4rem 0.75rem;font-size:0.82rem"
-          onclick="deleteTreffen('${t.date}',event)">🗑</button>
+        <button class="btn-danger" style="padding:0.4rem 0.75rem;font-size:0.82rem;cursor:pointer"
+          onclick="deleteTreffen('${t.date}',event)">🗑 Löschen</button>
       </div>` : '';
 
     return `<div class="treffen-card">
@@ -1875,10 +1875,19 @@ function setTreffenYear(y) { currentTreffenYear = y; renderTreffen(); }
 
 function deleteTreffen(date, e) {
   e.stopPropagation();
+  const ds = new Date(date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+  if (!confirm(`Treffen vom ${ds} wirklich löschen?`)) return;
+  // Remove from custom treffen
   appData.treffen = appData.treffen.filter(t => t.date !== date);
+  // Also remove from in-memory historicalData so it disappears immediately
+  Object.values(historicalData).forEach(yr => {
+    if (yr.treffen) yr.treffen = yr.treffen.filter(t => t.date !== date);
+  });
   saveData();
   deleteTreffenFromSupabase(date);
   renderTreffen();
+  renderDashboard();
+  showMsg(`Treffen vom ${ds} gelöscht ✓`, true);
 }
 
 // ============================================================
