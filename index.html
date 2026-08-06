@@ -458,7 +458,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.7</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.8</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -2012,25 +2012,15 @@ function renderOverall() {
     return `<div class="year-card"><h3>🏆 ${y}</h3>${items}</div>`;
   }).join('');
 
-  // Overall location stats across all years
+  // Overall location stats — getAllTreffen ensures Supabase edits override historical ort
   const allLocs = {};
   years.forEach(y => {
-    const hist = historicalData[y];
-    if (!hist) return;
-    hist.treffen.forEach(t => {
+    getAllTreffen(y).forEach(t => {
       if (!t.ort || t.ort === '-') return;
       t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(loc => {
         const l = loc.trim();
         if (l) allLocs[l] = (allLocs[l]||0) + 1;
       });
-    });
-  });
-  // also custom treffen
-  appData.treffen.forEach(t => {
-    if (!t.ort || t.ort === '-') return;
-    t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(loc => {
-      const l = loc.trim();
-      if (l) allLocs[l] = (allLocs[l]||0) + 1;
     });
   });
   const sortedLocs = Object.entries(allLocs).sort((a,b)=>b[1]-a[1]);
