@@ -458,7 +458,7 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
   <div class="hero">
-    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.8</span></h1>
+    <h1>Stammtisch Statistik <span style="font-size:0.45em;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;vertical-align:middle">v4.9</span></h1>
     <p>Seit 2023 — Donnerstags ab 20:00 Uhr</p>
   </div>
   <details class="statuten-collapse">
@@ -1977,12 +1977,12 @@ function renderOverall() {
   });
   const sortedMembers = [...members].sort((a,b) => grandTotals[b] - grandTotals[a]);
 
-  // Big comparison table
+  // Big comparison table — yearStats already computed above using getYearStats()
   const tableRows = sortedMembers.map((m, rank) => {
     const cells = years.map(y => {
-      const hist = historicalData[y];
-      const maxP = hist ? hist.maxPossible : 50;
-      const pts = hist ? (hist.totals[m]||0) : 0;
+      const ys = yearStats[y];
+      const maxP = ys ? ys.maxP : 50;
+      const pts = ys ? (ys.totals[m]||0) : 0;
       const pct = (pts/maxP*100).toFixed(0);
       return `<td style="white-space:nowrap">${pts}<span style="color:var(--muted);font-size:0.75rem"> ${pct}%</span></td>`;
     }).join('');
@@ -2041,11 +2041,9 @@ function renderOverall() {
   // Each point = one treffen, x=date, y=number of members present
   const allTreffenSorted = [];
   years.forEach(y => {
-    const hist = historicalData[y];
-    if (hist) hist.treffen.forEach(t => allTreffenSorted.push(t));
-  });
-  appData.treffen.forEach(t => {
-    if (!allTreffenSorted.find(x => x.date === t.date)) allTreffenSorted.push(t);
+    getAllTreffen(y).forEach(t => {
+      if (!allTreffenSorted.find(x => x.date === t.date)) allTreffenSorted.push(t);
+    });
   });
   allTreffenSorted.sort((a,b) => new Date(a.date)-new Date(b.date));
 
