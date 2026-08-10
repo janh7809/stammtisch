@@ -379,30 +379,6 @@
   .extra-card .ec-sub { font-size: 0.85rem; color: var(--muted); }
   .all-attend-list { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .all-attend-item { font-size: 0.82rem; color: var(--muted); padding: 0.2rem 0.5rem; background: rgba(201,168,76,0.06); border-radius: 4px; }
-  @media print {
-    @page { size: A3 landscape; margin: 1.5cm; }
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    body { background: white !important; color: #1a2540 !important; font-size: 11px !important; }
-    .bottom-nav, #editTreffenModal, #avatarModal, #loginModal, .modal-backdrop,
-    .admin-section, #page-treffen, #page-admin, .statuten-collapse { display: none !important; }
-    .page { display: none !important; padding-bottom: 0 !important; }
-    #page-dashboard.active { display: block !important; }
-    #page-overall { display: block !important; margin-top: 0 !important; }
-    #print-overall-header { display: block !important; }
-    .hero { padding: 0.5rem 0 !important; }
-    .hero h1 { font-size: 1.8rem !important; }
-    .stat-card { border: 1px solid #c8d4e8 !important; background: #f8faff !important; break-inside: avoid; }
-    .stat-value { font-size: 1.4rem !important; }
-    .extra-card { border: 1px solid #c8d4e8 !important; background: #f8faff !important; break-inside: avoid; }
-    .extra-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
-    .ranking-table th { background: #eef2f8 !important; color: #1a3f7a !important; }
-    .ranking-table td, .ranking-table th { border-bottom: 1px solid #e0e8f0 !important; }
-    .section-title { color: #1a3f7a !important; border-bottom-color: #c8d4e8 !important; }
-    .year-tabs, .treffen-filters { display: none !important; }
-    #dashMemberChart svg { max-height: 160px !important; }
-    .overall-grid { grid-template-columns: repeat(4, 1fr) !important; }
-    #print-page-break { display: block !important; page-break-before: always; }
-  }
   #print-overall-header { display: none; }
   #print-page-break { display: none; }
 </style>
@@ -2701,23 +2677,250 @@ function exportToExcel() {
 // ============================================================
 function printDashboard() {
   const year = parseInt(document.getElementById('printYear').value);
-  // Render dashboard for selected year
+  const years = [2023,2024,2025,2026];
+  const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
+
+  // ── Collect data ──────────────────────────────────────────────────────
   setDashYear(year);
-  // Also render overall so it appears on second page
-  renderOverall();
-  // Make overall page visible for print
-  const overallPage = document.getElementById('page-overall');
-  const dashPage = document.getElementById('page-dashboard');
-  // Temporarily make both active for print
-  dashPage.classList.add('active');
-  overallPage.style.display = 'block';
-  setTimeout(() => {
-    window.print();
-    // Restore after print dialog closes
-    setTimeout(() => {
-      overallPage.style.display = '';
-    }, 1000);
-  }, 800);
+  const ys = getYearStats(year);
+  const ranked = members.map(m => ({name:m, pts:ys.totals[m]||0, pct:(ys.totals[m]||0)/ys.maxP}))
+                         .sort((a,b) => b.pts-a.pts);
+  const maxPts = ranked[0]?.pts || 1;
+
+  // Grand totals for overall
+  const yearStats = {};
+  years.forEach(y => { yearStats[y] = getYearStats(y); });
+  const grandTotals = {};
+  members.forEach(m => { grandTotals[m] = years.reduce((s,y) => s+(yearStats[y].totals[m]||0), 0); });
+  const sortedAll = [...members].sort((a,b) => grandTotals[b]-grandTotals[a]);
+
+  // Locations overall
+  const allLocs = {};
+  years.forEach(y => getAllTreffen(y).forEach(t => {
+    if (!t.ort||t.ort==='-') return;
+    t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(l => { l=l.trim(); if(l) allLocs[l]=(allLocs[l]||0)+1; });
+  }));
+  const topLocs = Object.entries(allLocs).sort((a,b)=>b[1]-a[1]).slice(0,12);
+
+  // Unexcused data
+  const hist = historicalData[year];
+  const noExcuse={}, excNoReason={};
+  members.forEach(m=>{noExcuse[m]=0;excNoReason[m]=0;});
+  if(hist&&hist.unexcused) Object.values(hist.unexcused).forEach(ml=>ml.forEach(m=>{if(noExcuse[m]!==undefined)noExcuse[m]++;}));
+  if(hist&&hist.excused_no_reason) members.forEach(m=>{excNoReason[m]+=(hist.excused_no_reason[m]||0);});
+
+  // Streak per member
+  const treffen = ys.treffen;
+  const streaks = {};
+  members.forEach(m => {
+    let max=0,cur=0;
+    treffen.forEach(t => { if((t.attendance[m]||0)>0){cur++;max=Math.max(max,cur);}else cur=0; });
+    streaks[m]=max;
+  });
+  const sortedStreaks = [...members].sort((a,b)=>streaks[b]-streaks[a]);
+
+  // Guests
+  const guestCount = {};
+  getAllTreffen(year).forEach(t => {
+    if(!t.guests||t.guests==='-') return;
+    t.guests.split(/,\s*|\s+und\s+/i).forEach(g=>{g=g.trim();if(g)guestCount[g]=(guestCount[g]||0)+1;});
+  });
+  const topGuests = Object.entries(guestCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  // ── CSS ───────────────────────────────────────────────────────────────
+  const css = `
+    * { box-sizing:border-box; margin:0; padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body { font-family:'DM Sans',system-ui,sans-serif; font-size:10px; color:#1a2540; background:white; }
+    @page { size:A3 landscape; margin:1cm; }
+    @media print { .pagebreak { page-break-after:always; } }
+    .page { width:100%; padding:0.5cm; }
+    h1 { font-family:'Georgia',serif; font-size:20px; color:#1a3f7a; margin-bottom:4px; }
+    h2 { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+         color:#1a3f7a; border-bottom:1.5px solid #c8d4e8; padding-bottom:4px; margin:10px 0 6px; }
+    h3 { font-size:10px; font-weight:600; color:#1a3f7a; margin-bottom:4px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+    .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .card { background:#f4f7fc; border:0.5px solid #c8d4e8; border-radius:6px; padding:6px 8px; }
+    .stat-row { display:flex; justify-content:space-between; align-items:center; padding:3px 0;
+                border-bottom:0.5px solid #e0e8f0; font-size:10px; }
+    .stat-row:last-child { border:none; }
+    .num { font-size:18px; font-weight:700; color:#1a3f7a; }
+    .lbl { font-size:8px; color:#6a7a96; text-transform:uppercase; letter-spacing:0.05em; }
+    .badge { display:inline-block; padding:1px 6px; border-radius:10px; font-size:9px; font-weight:500; }
+    .g  { background:#dcfce7; color:#166534; }
+    .y  { background:#fef9c3; color:#854d0e; }
+    .o  { background:#ffedd5; color:#9a3412; }
+    .r  { background:#fee2e2; color:#7f1d1d; }
+    .bar-wrap { display:flex; align-items:center; gap:4px; }
+    .bar { height:5px; background:#1a3f7a; border-radius:3px; opacity:0.7; }
+    .bar-bg { flex:1; height:5px; background:#e0e8f0; border-radius:3px; overflow:hidden; }
+    table { width:100%; border-collapse:collapse; font-size:9.5px; }
+    th { background:#eef2f8; color:#1a3f7a; padding:3px 6px; text-align:left; font-size:9px;
+         text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #c8d4e8; }
+    td { padding:3px 6px; border-bottom:0.5px solid #eef2f8; }
+    .av { font-size:12px; }
+    .meta { font-size:8px; color:#6a7a96; margin-top:3px; }
+  `;
+
+  // ── PAGE 1: Jahresstatistik ───────────────────────────────────────────
+  const statCards = [
+    {l:'Mögliche Stammtische', v:ys.maxP},
+    {l:'Stattgefunden', v:ys.stattgefunden},
+    {l:'Ausgefallen', v:ys.ausgefallen},
+    {l:'Mitglieder', v:members.length},
+    {l:'Ø Teilnehmer/Treffen', v:(treffen.filter(t=>Object.values(t.attendance||{}).some(v=>v>0)).reduce((s,t)=>s+members.filter(m=>(t.attendance[m]||0)>0).length,0)/Math.max(ys.stattgefunden,1)).toFixed(1)},
+  ].map(s=>`<div class="card"><div class="lbl">${s.l}</div><div class="num">${s.v}</div></div>`).join('');
+
+  const rankRows = ranked.map((r,i) => `<tr>
+    <td style="font-weight:600">${i+1}.</td>
+    <td><span class="av">${avatarData[r.name]?.emoji||'🧑'}</span> ${r.name}</td>
+    <td style="font-weight:700;color:#1a3f7a">${r.pts}</td>
+    <td>${(r.pct*100).toFixed(2)}%</td>
+    <td style="width:80px"><div class="bar-bg"><div class="bar" style="width:${(r.pts/maxPts*100).toFixed(0)}%"></div></div></td>
+  </tr>`).join('');
+
+  const streakRows = sortedStreaks.map((m,i)=>`<tr>
+    <td>${i+1}.</td><td><span class="av">${avatarData[m]?.emoji||'🧑'}</span> ${m}</td>
+    <td style="font-weight:600">${streaks[m]}×</td>
+  </tr>`).join('');
+
+  const noExcRows = [...members].sort((a,b)=>noExcuse[b]-noExcuse[a]).map((m,i)=>`<tr>
+    <td>${i+1}.</td><td><span class="av">${avatarData[m]?.emoji||'🧑'}</span> ${m}</td>
+    <td>${noExcuse[m]>0?'<span class="badge r">'+noExcuse[m]+'×</span>':'<span class="badge g">0</span>'}</td>
+  </tr>`).join('');
+
+  const noReasonRows = [...members].sort((a,b)=>excNoReason[b]-excNoReason[a]).map((m,i)=>`<tr>
+    <td>${i+1}.</td><td><span class="av">${avatarData[m]?.emoji||'🧑'}</span> ${m}</td>
+    <td>${excNoReason[m]>0?'<span class="badge o">'+excNoReason[m]+'×</span>':'<span class="badge g">0</span>'}</td>
+  </tr>`).join('');
+
+  const guestRows = topGuests.map(([g,n],i)=>`<tr>
+    <td>${i+1}.</td><td><span class="av">${avatarData[g]?.emoji||'🧑'}</span> ${g}</td>
+    <td style="font-weight:600">${n}×</td>
+  </tr>`).join('');
+
+  // Location top for year
+  const yearLocs={};
+  getAllTreffen(year).forEach(t=>{
+    if(!t.ort||t.ort==='-') return;
+    t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(l=>{l=l.trim();if(l)yearLocs[l]=(yearLocs[l]||0)+1;});
+  });
+  const topYearLocs = Object.entries(yearLocs).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const locYearRows = topYearLocs.map(([l,n],i)=>`<tr>
+    <td>${i+1}.</td>
+    <td>${locationAvatarData[l]?.emoji||(["Christoph","André","Fabian","Patrick","Jan","Klaas"].includes(l)?'🏠':'⚓')} ${l}</td>
+    <td style="font-weight:600">${n}×</td>
+  </tr>`).join('');
+
+  const page1 = `
+  <div class="page pagebreak">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;border-bottom:2px solid #1a3f7a;padding-bottom:6px">
+      <div>
+        <h1>🍺 Stammtisch Statistik ${year}</h1>
+        <div class="meta">Gedruckt am ${new Date().toLocaleDateString('de-DE')} · stammtisch-five.vercel.app</div>
+      </div>
+    </div>
+    <div class="grid4" style="margin-bottom:10px">${statCards}</div>
+    <div class="grid3">
+      <div>
+        <h2>Rangliste</h2>
+        <table><thead><tr><th>#</th><th>Mitglied</th><th>Teiln.</th><th>Quote</th><th>Balken</th></tr></thead>
+        <tbody>${rankRows}</tbody></table>
+      </div>
+      <div>
+        <h2>Locations</h2>
+        <table><thead><tr><th>#</th><th>Location</th><th>Besuche</th></tr></thead>
+        <tbody>${locYearRows}</tbody></table>
+        <h2 style="margin-top:8px">Häufigste Gäste</h2>
+        <table><thead><tr><th>#</th><th>Gast</th><th>Besuche</th></tr></thead>
+        <tbody>${guestRows}</tbody></table>
+      </div>
+      <div>
+        <h2>Längste Serie</h2>
+        <table><thead><tr><th>#</th><th>Mitglied</th><th>Serie</th></tr></thead>
+        <tbody>${streakRows}</tbody></table>
+        <h2 style="margin-top:8px">Unentschuldigt</h2>
+        <table><thead><tr><th>#</th><th>Mitglied</th><th>Anz.</th></tr></thead>
+        <tbody>${noExcRows}</tbody></table>
+        <h2 style="margin-top:8px">Entsch. ohne Begr.</h2>
+        <table><thead><tr><th>#</th><th>Mitglied</th><th>Anz.</th></tr></thead>
+        <tbody>${noReasonRows}</tbody></table>
+      </div>
+    </div>
+  </div>`;
+
+  // ── PAGE 2: Overall ───────────────────────────────────────────────────
+  const overallRows2 = sortedAll.map((m,rank)=>{
+    const pts = years.map(y=>yearStats[y].totals[m]||0);
+    const pcts = years.map(y=>{const ys2=yearStats[y];return ys2?(pts[years.indexOf(y)]/ys2.maxP*100).toFixed(0)+'%':'-';});
+    return `<tr>
+      <td style="font-weight:600">${rank+1}.</td>
+      <td><span class="av">${avatarData[m]?.emoji||'🧑'}</span> ${m}</td>
+      ${pts.map(p=>`<td style="font-weight:600;color:#1a3f7a">${p}</td>`).join('')}
+      ${pcts.map(p=>`<td style="color:#6a7a96">${p}</td>`).join('')}
+      <td style="font-weight:700;color:#1a3f7a">${grandTotals[m]}</td>
+    </tr>`;
+  }).join('');
+
+  const podiumCards = years.map(y=>{
+    const ys2 = yearStats[y];
+    const top3 = Object.entries(ys2.totals).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    return `<div class="card">
+      <h3>🏆 ${y}</h3>
+      ${top3.map(([name,pts],i)=>`<div class="stat-row">
+        <span>${['🥇','🥈','🥉'][i]} <span class="av">${avatarData[name]?.emoji||'🧑'}</span> ${name}</span>
+        <span style="font-weight:600">${pts}</span>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+
+  const locOverallRows = topLocs.map(([l,n],i)=>`<tr>
+    <td>${i+1}.</td>
+    <td>${locationAvatarData[l]?.emoji||(["Christoph","André","Fabian","Patrick","Jan","Klaas"].includes(l)?'🏠':'⚓')} ${l}</td>
+    <td style="font-weight:600">${n}×</td>
+  </tr>`).join('');
+
+  const page2 = `
+  <div class="page">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;border-bottom:2px solid #1a3f7a;padding-bottom:6px">
+      <div>
+        <h1>🍺 Stammtisch Overall Statistik</h1>
+        <div class="meta">Alle Jahre · Gedruckt am ${new Date().toLocaleDateString('de-DE')}</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div>
+        <h2>Gesamtübersicht nach Teilnahmen</h2>
+        <table>
+          <thead><tr><th>#</th><th>Mitglied</th>
+            ${years.map(y=>`<th>${y} Pkt.</th>`).join('')}
+            ${years.map(y=>`<th>${y} %</th>`).join('')}
+            <th>Gesamt</th>
+          </tr></thead>
+          <tbody>${overallRows2}</tbody>
+        </table>
+        <h2 style="margin-top:10px">Overall Locations</h2>
+        <table><thead><tr><th>#</th><th>Location</th><th>Besuche</th></tr></thead>
+        <tbody>${locOverallRows}</tbody></table>
+      </div>
+      <div>
+        <h2>Jahressieger</h2>
+        <div class="grid2">${podiumCards}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Open print window ─────────────────────────────────────────────────
+  const win = window.open('', '_blank', 'width=1400,height=900');
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>${css}</style>
+    <title>Stammtisch Statistik ${year}</title>
+  </head><body>${page1}${page2}</body></html>`);
+  win.document.close();
+  setTimeout(() => { win.focus(); win.print(); }, 1200);
 }
 
 // ============================================================
@@ -3006,7 +3209,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v5.1 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v5.2 &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
 </div>
 </body>
