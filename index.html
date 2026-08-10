@@ -2911,16 +2911,25 @@ function printDashboard() {
     </div>
   </div>`;
 
-  // ── Open print window ─────────────────────────────────────────────────
-  const win = window.open('', '_blank', 'width=1400,height=900');
-  win.document.write(`<!DOCTYPE html><html><head>
+  // ── Download as HTML file (avoids popup blocker) ─────────────────────
+  const html = `<!DOCTYPE html><html><head>
     <meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>${css}</style>
+    <style>${css}
+    @media screen { body { padding: 20px; } .pagebreak { margin-bottom: 40px; border-bottom: 2px dashed #ccc; padding-bottom: 20px; } }
+    </style>
     <title>Stammtisch Statistik ${year}</title>
-  </head><body>${page1}${page2}</body></html>`);
-  win.document.close();
-  setTimeout(() => { win.focus(); win.print(); }, 1200);
+    <script>window.onload = function() { window.print(); }<\/script>
+  </head><body>${page1}${page2}</body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = \`Stammtisch_Druck_${year}.html\`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showMsg('✅ Druckdatei heruntergeladen — öffne sie im Browser und drucke von dort (Strg+P)', true);
 }
 
 // ============================================================
@@ -3209,7 +3218,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v5.2 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v5.3 &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
 </div>
 </body>
