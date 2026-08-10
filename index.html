@@ -380,18 +380,31 @@
   .all-attend-list { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .all-attend-item { font-size: 0.82rem; color: var(--muted); padding: 0.2rem 0.5rem; background: rgba(201,168,76,0.06); border-radius: 4px; }
   @media print {
-    body { background: white !important; color: black !important; }
-    .bottom-nav, #editTreffenModal, #avatarModal, #loginModal, .modal-backdrop { display: none !important; }
-    .page { display: block !important; padding-bottom: 0 !important; }
-    .page:not(#print-page) { display: none !important; }
-    #print-page { display: block !important; }
-    .stat-card { border: 1px solid #ccc !important; background: white !important; }
-    .ranking-table th, .ranking-table td { border-bottom: 1px solid #eee !important; color: black !important; }
-    .extra-card { border: 1px solid #ccc !important; background: white !important; break-inside: avoid; }
-    .section-title { color: #1a3f7a !important; }
-    .treffen-card { break-inside: avoid; }
     @page { size: A3 landscape; margin: 1.5cm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: white !important; color: #1a2540 !important; font-size: 11px !important; }
+    .bottom-nav, #editTreffenModal, #avatarModal, #loginModal, .modal-backdrop,
+    .admin-section, #page-treffen, #page-admin, .statuten-collapse { display: none !important; }
+    .page { display: none !important; padding-bottom: 0 !important; }
+    #page-dashboard.active { display: block !important; }
+    #page-overall { display: block !important; margin-top: 0 !important; }
+    #print-overall-header { display: block !important; }
+    .hero { padding: 0.5rem 0 !important; }
+    .hero h1 { font-size: 1.8rem !important; }
+    .stat-card { border: 1px solid #c8d4e8 !important; background: #f8faff !important; break-inside: avoid; }
+    .stat-value { font-size: 1.4rem !important; }
+    .extra-card { border: 1px solid #c8d4e8 !important; background: #f8faff !important; break-inside: avoid; }
+    .extra-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
+    .ranking-table th { background: #eef2f8 !important; color: #1a3f7a !important; }
+    .ranking-table td, .ranking-table th { border-bottom: 1px solid #e0e8f0 !important; }
+    .section-title { color: #1a3f7a !important; border-bottom-color: #c8d4e8 !important; }
+    .year-tabs, .treffen-filters { display: none !important; }
+    #dashMemberChart svg { max-height: 160px !important; }
+    .overall-grid { grid-template-columns: repeat(4, 1fr) !important; }
+    #print-page-break { display: block !important; page-break-before: always; }
   }
+  #print-overall-header { display: none; }
+  #print-page-break { display: none; }
 </style>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
@@ -474,6 +487,7 @@
   <div id="extraStats"></div>
 </div>
 
+<div id="print-page-break"></div>
 <!-- TREFFEN PAGE -->
 <div class="page" id="page-treffen">
   <div class="hero" style="padding:2rem 0 1.5rem">
@@ -2687,10 +2701,23 @@ function exportToExcel() {
 // ============================================================
 function printDashboard() {
   const year = parseInt(document.getElementById('printYear').value);
+  // Render dashboard for selected year
   setDashYear(year);
+  // Also render overall so it appears on second page
+  renderOverall();
+  // Make overall page visible for print
+  const overallPage = document.getElementById('page-overall');
+  const dashPage = document.getElementById('page-dashboard');
+  // Temporarily make both active for print
+  dashPage.classList.add('active');
+  overallPage.style.display = 'block';
   setTimeout(() => {
     window.print();
-  }, 500);
+    // Restore after print dialog closes
+    setTimeout(() => {
+      overallPage.style.display = '';
+    }, 1000);
+  }, 800);
 }
 
 // ============================================================
@@ -2979,7 +3006,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v5.0 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v5.1 &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
 </div>
 </body>
