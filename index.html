@@ -379,6 +379,19 @@
   .extra-card .ec-sub { font-size: 0.85rem; color: var(--muted); }
   .all-attend-list { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .all-attend-item { font-size: 0.82rem; color: var(--muted); padding: 0.2rem 0.5rem; background: rgba(201,168,76,0.06); border-radius: 4px; }
+  @media print {
+    body { background: white !important; color: black !important; }
+    .bottom-nav, #editTreffenModal, #avatarModal, #loginModal, .modal-backdrop { display: none !important; }
+    .page { display: block !important; padding-bottom: 0 !important; }
+    .page:not(#print-page) { display: none !important; }
+    #print-page { display: block !important; }
+    .stat-card { border: 1px solid #ccc !important; background: white !important; }
+    .ranking-table th, .ranking-table td { border-bottom: 1px solid #eee !important; color: black !important; }
+    .extra-card { border: 1px solid #ccc !important; background: white !important; break-inside: avoid; }
+    .section-title { color: #1a3f7a !important; }
+    .treffen-card { break-inside: avoid; }
+    @page { size: A3 landscape; margin: 1.5cm; }
+  }
 </style>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
@@ -407,6 +420,8 @@
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <!-- LOGIN MODAL -->
+<span id="adminBadge" style="display:none"></span>
+<button id="loginBtn" style="display:none"></button>
 <div class="modal-backdrop" id="loginModal">
   <div class="modal">
     <h2>Admin Login</h2>
@@ -587,6 +602,20 @@
       <h3>📥 Excel-Export</h3>
       <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Exportiert alle Stammtisch-Daten als Excel-Datei mit separaten Reitern pro Jahr plus einem Gesamt-Überblick.</p>
       <button class="btn-primary" onclick="exportToExcel()" style="width:100%">📥 Excel herunterladen</button>
+    </div>
+    <div class="admin-card">
+      <h3>🖨 Dashboard drucken</h3>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Druckt das aktuelle Dashboard (gewähltes Jahr) auf DIN A3 aus.</p>
+      <div class="form-row">
+        <label>Jahr für Druck</label>
+        <select id="printYear">
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="printDashboard()" style="width:100%">🖨 Drucken</button>
     </div>
 
     <div class="admin-card">
@@ -950,11 +979,9 @@ let isAdmin = false;
 function restoreAdminSession() {
   if (sessionStorage.getItem('st_admin') === 'true') {
     isAdmin = true;
-    document.getElementById('adminBadge').style.display = 'inline';
-    document.getElementById('loginBtn').style.display = '';
-    document.getElementById('loginBtn').textContent = 'Abmelden';
-    document.getElementById('loginBtn').onclick = doLogout;
     document.getElementById('bnav-admin').style.display = '';
+    const footerAdmin = document.getElementById('footerAdminLink');
+    if (footerAdmin) { footerAdmin.textContent = '👑 Admin · Abmelden'; footerAdmin.onclick = (e) => { e.preventDefault(); doLogout(); }; }
   }
 }
 let currentDashYear = 2026;
@@ -2368,11 +2395,10 @@ function doLogin() {
   if (pw === ADMIN_PW) {
     isAdmin = true;
     sessionStorage.setItem('st_admin', 'true');
-    document.getElementById('adminBadge').style.display = 'inline';
-    document.getElementById('loginBtn').style.display = '';
-    document.getElementById('loginBtn').textContent = 'Abmelden';
-    document.getElementById('loginBtn').onclick = doLogout;
     document.getElementById('bnav-admin').style.display = '';
+    // Update footer admin link to show logout option
+    const footerAdmin = document.getElementById('footerAdminLink');
+    if (footerAdmin) { footerAdmin.textContent = '👑 Admin · Abmelden'; footerAdmin.onclick = (e) => { e.preventDefault(); doLogout(); }; }
     closeLogin();
     renderAdmin();
   } else {
@@ -2654,6 +2680,17 @@ function exportToExcel() {
   const filename = `Stammtisch_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
   XLSX.writeFile(wb, filename);
   showMsg('✅ Excel-Datei wird heruntergeladen!', true);
+}
+
+// ============================================================
+// PRINT DASHBOARD
+// ============================================================
+function printDashboard() {
+  const year = parseInt(document.getElementById('printYear').value);
+  setDashYear(year);
+  setTimeout(() => {
+    window.print();
+  }, 500);
 }
 
 // ============================================================
@@ -2943,7 +2980,7 @@ restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
   © 2026 Jan Hageney &nbsp;·&nbsp; v5.0 &nbsp;·&nbsp;
-  <a href="#" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
+  <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
 </div>
 </body>
 </html>
