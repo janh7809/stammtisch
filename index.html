@@ -1845,6 +1845,8 @@ function setDashYear(y) { currentDashYear = y; renderDashboard(); }
 function formatExcuse(text) {
   if (!text) return '';
   const lines = text.split(/\n|·/).map(s => s.trim()).filter(Boolean);
+  const nameAliases = { 'Haddai':'Christoph', 'Feyle':'Fabian', 'Oli':'Oliver' };
+  const resolveName = n => nameAliases[n] || n;
 
   // Categorise each line
   const withReason = [], withoutReason = [], unexcused = [];
@@ -1852,25 +1854,25 @@ function formatExcuse(text) {
   lines.forEach(line => {
     // Extract name: everything before first "hat sich" or first ":"
     let name = '', reason = '';
-    const noExcMatch = line.match(/^(.+?) hat sich nicht entschuldigt/i);
-    const noReasonMatch = line.match(/^(.+?) hat sich entschuldigt aber (ohne|keine) Begründung/i);
-    const withReasonMatch = line.match(/^(.+?) hat sich entschuldigt mit der Begr[üu]ndung[\s"]+(.+?)["\'\s]*$/i);
+    const noExcMatch = line.match(/^(.+?) hat sich nicht entsch\w*dig\w*/i);
+    const noReasonMatch = line.match(/^(.+?) hat sich entsch\w*dig\w* (?:aber )?(?:ohne|keine) Begr[üu]nd\w*/i);
+    const withReasonMatch = line.match(/^(.+?) hat sich entsch\w*dig\w* mit (?:der |)Begr[üu]nd\w*[,\s"]+(.+?)["\'\s]*$/i);
     const colonMatch = line.match(/^(.+?):\s*(.*)$/);
 
     if (noExcMatch) {
-      unexcused.push({ name: noExcMatch[1].trim(), reason: '' });
+      unexcused.push({ name: resolveName(noExcMatch[1].trim()), reason: '' });
     } else if (noReasonMatch) {
-      withoutReason.push({ name: noReasonMatch[1].trim(), reason: '' });
+      withoutReason.push({ name: resolveName(noReasonMatch[1].trim()), reason: '' });
     } else if (withReasonMatch) {
-      withReason.push({ name: withReasonMatch[1].trim(), reason: withReasonMatch[2].trim().replace(/["\']/g,'') });
+      withReason.push({ name: resolveName(withReasonMatch[1].trim()), reason: withReasonMatch[2].trim().replace(/["\']/g,'') });
     } else if (colonMatch) {
       // Guess category from content
       const r = colonMatch[2].toLowerCase();
-      const n = colonMatch[1].trim();
+      const n = resolveName(colonMatch[1].trim());
       const g = colonMatch[2].trim();
-      if (r.includes('nicht entschuldigt') || r.includes('unentschuldigt')) {
+      if (r.includes('nicht entsch') || r.includes('unentschuldigt')) {
         unexcused.push({ name: n, reason: '' });
-      } else if (r.includes('ohne begründung') || r.includes('keine begründung')) {
+      } else if (r.includes('ohne begr') || r.includes('keine begr')) {
         withoutReason.push({ name: n, reason: '' });
       } else {
         withReason.push({ name: n, reason: g });
@@ -3431,7 +3433,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v7.6 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v7.7 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
