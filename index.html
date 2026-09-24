@@ -699,14 +699,16 @@
       <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Druckt das aktuelle Dashboard (gewähltes Jahr) auf DIN A3 aus.</p>
       <div class="form-row">
         <label>Jahr für Druck</label>
-        <select id="printYear">
-          <option value="2026">2026</option>
-          <option value="2025">2025</option>
-          <option value="2024">2024</option>
-          <option value="2023">2023</option>
-        </select>
+        <select id="printYear"></select>
       </div>
       <button class="btn-primary" onclick="printDashboard()" style="width:100%">🖨 Drucken</button>
+    </div>
+
+    <div class="admin-card">
+      <h3>🔍 Datenintegrität prüfen</h3>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Prüft alle vier Jahre auf einmal: fehlende/doppelte Termine, unklare Abwesenheitsgründe und Konflikte zwischen Code- und Datenbank-Version.</p>
+      <button class="btn-primary" onclick="runFullIntegrityCheck()" style="width:100%">🔍 Alle Jahre prüfen</button>
+      <div id="integrityCheckResult" style="margin-top:1rem"></div>
     </div>
 
     <div class="admin-card">
@@ -724,6 +726,21 @@
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
+// ============================================================
+// SICHERHEIT: HTML-Escaping gegen XSS bei Freitext-Feldern
+// (Entschuldigungen, Bemerkungen, Orte, Gäste — alles was im
+// Adminbereich frei eingegeben werden kann)
+// ============================================================
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const SUPABASE_URL = "https://zdqdjkqnyjuaznxpgubh.supabase.co";
 const SUPABASE_KEY = "sb_publishable_seLB9o3sE-QJp5koErHYow_ni-IcnVq";
 
@@ -1360,6 +1377,30 @@ async function deleteTreffenFromSupabase(date) {
   return sbDelete('treffen', `date=eq.${date}`);
 }
 
+// ============================================================
+// JAHRESWECHSEL: automatisch, ohne Code-Änderung
+// ============================================================
+// Alle Jahre die angezeigt werden sollen: alle Jahre mit historischen Daten,
+// plus das aktuelle Kalenderjahr, plus alle Jahre in denen bereits eigene
+// (Supabase-)Treffen existieren — damit taucht ein neues Jahr automatisch
+// auf, sobald jemand den ersten Termin dafür einträgt (oder spätestens am 1.1.).
+function getAllYears() {
+  const years = new Set(Object.keys(historicalData).map(Number));
+  years.add(new Date().getFullYear());
+  appData.treffen.forEach(t => years.add(new Date(t.date).getFullYear()));
+  return Array.from(years).sort((a,b) => a-b);
+}
+
+// Anzahl Donnerstage in einem Jahr — Fallback für "mögliche Stammtische",
+// wenn für das Jahr noch keine historischen Daten (mit exaktem Wert) hinterlegt sind.
+function countThursdaysInYear(year) {
+  let count = 0;
+  const d = new Date(year, 0, 1);
+  while (d.getDay() !== 4) d.setDate(d.getDate() + 1);
+  while (d.getFullYear() === year) { count++; d.setDate(d.getDate() + 7); }
+  return count;
+}
+
 function getAllTreffen(year) {
   const hist = historicalData[year];
   const custom = appData.treffen.filter(t => new Date(t.date).getFullYear() === year);
@@ -1377,7 +1418,7 @@ function getYearStats(year) {
   // getAllTreffen already deduplicates: Supabase overrides historical for same date
   const treffen = getAllTreffen(year);
   const members = hist ? hist.members : appData.members;
-  const maxP = hist ? hist.maxPossible : 50;
+  const maxP = hist ? hist.maxPossible : countThursdaysInYear(year);
 
   // Always recompute totals from the deduplicated treffen list
   // This ensures edited treffen don't get double-counted
@@ -1396,6 +1437,37 @@ function getYearStats(year) {
 // ============================================================
 // SHARED: Entschuldigungskategorien (genutzt von Dashboard UND Ausdruck)
 // ============================================================
+// ============================================================
+// SHARED: Freitext-Zeilen einer Entschuldigung in Kategorien zerlegen
+// (einzige Quelle dieser Logik — wird von Treffen-Karten UND
+// Selbsttest gleichermaßen genutzt, um Abweichungen zu vermeiden)
+// ============================================================
+const NAME_ALIASES = { 'Haddai':'Christoph', 'Feyle':'Fabian', 'Oli':'Oliver' };
+function resolveAliasName(n) { return NAME_ALIASES[n] || n; }
+
+function parseExcuseLines(excuseText) {
+  const category = {};   // name -> 'ok'|'no-reason'|'unexcused'
+  const reasonText = {}; // name -> Begründungstext (nur bei 'ok')
+  if (!excuseText) return { category, reasonText };
+  const lines = excuseText.split(/\n|·/).map(s=>s.trim()).filter(Boolean);
+  lines.forEach(line => {
+    const noExc    = line.match(/^(.+?) hat sich nicht entsch\w*dig\w*/i);
+    const noReason = line.match(/^(.+?) hat sich entsch\w*dig\w* (?:aber )?(?:ohne|keine) Begr[üu]nd\w*/i);
+    const withR    = line.match(/^(.+?) hat sich entsch\w*dig\w* mit (?:der |)Begr[üu]nd\w*[,\s"]+(.+?)["'\s]*$/i);
+    const colon    = line.match(/^(.+?):\s*(.+)$/);
+    if (noExc)    { const nm=resolveAliasName(noExc[1].trim());   category[nm]='unexcused'; reasonText[nm]=''; }
+    else if (noReason) { const nm=resolveAliasName(noReason[1].trim()); category[nm]='no-reason'; reasonText[nm]=''; }
+    else if (withR)    { const nm=resolveAliasName(withR[1].trim());    category[nm]='ok';        reasonText[nm]=withR[2].trim().replace(/["']/g,''); }
+    else if (colon) {
+      const nm = resolveAliasName(colon[1].trim()), gr = colon[2].trim(), gl = gr.toLowerCase();
+      if (gl.includes('nicht entsch')||gl.includes('unentschuldigt')) { category[nm]='unexcused'; reasonText[nm]=''; }
+      else if (gl.includes('ohne begr')||gl.includes('keine begr'))   { category[nm]='no-reason'; reasonText[nm]=''; }
+      else { category[nm]='ok'; reasonText[nm]=gr; }
+    }
+  });
+  return { category, reasonText };
+}
+
 function computeExcuseCategories(year) {
   const hist = historicalData[year];
   const members = hist ? hist.members : appData.members;
@@ -1451,6 +1523,36 @@ function computePlausibility(year) {
     }
   });
 
+  // Check 3: Jede Abwesenheit muss eindeutig kategorisierbar sein (kein "unbekannt").
+  // Nutzt exakt dieselbe Erkennung wie die Treffen-Karten (parseExcuseLines), damit
+  // Dashboard-Check und Anzeige nie mehr auseinanderlaufen können.
+  const hist = historicalData[year];
+  ys.treffen.forEach(t => {
+    const { category } = parseExcuseLines(t.excuse);
+    members.forEach(m => {
+      if ((t.attendance[m]||0) === 0) {
+        const flagged = hist && hist.unexcused && (hist.unexcused[t.date]||[]).includes(m);
+        if (!category[m] && !flagged) {
+          const ds = new Date(t.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+          issues.push(`${m} am ${ds}: Abwesenheitsgrund nicht eindeutig erkennbar (zeigt "unbekannt").`);
+        }
+      }
+    });
+  });
+
+  // Check 4: Termine, die sowohl im Code als auch in der Datenbank existieren —
+  // die Datenbank-Version gewinnt automatisch und überschreibt Code-Korrekturen.
+  // Rein informativ, damit das nicht wieder unbemerkt zu Verwirrung führt.
+  if (hist) {
+    const dbDates = appData.treffen
+      .filter(t => new Date(t.date).getFullYear() === year)
+      .map(t => t.date);
+    const overridden = dbDates.filter(d => hist.treffen.some(ht => ht.date === d));
+    if (overridden.length > 0) {
+      issues.push(`ℹ️ ${overridden.length} Termin(e) existieren sowohl im Code als auch in der Datenbank — die Datenbank-Version wird angezeigt: ${overridden.join(', ')}.`);
+    }
+  }
+
   return { ok: issues.length === 0, issues, entered, expected: ys.maxP };
 }
 
@@ -1458,7 +1560,7 @@ function computePlausibility(year) {
 // RENDER DASHBOARD
 // ============================================================
 function renderDashboard() {
-  const years = [2023,2024,2025,2026];
+  const years = getAllYears();
   const tabsEl = document.getElementById('dashYearTabs');
   tabsEl.innerHTML = years.map(y =>
     `<button class="year-tab ${y===currentDashYear?'active':''}" onclick="setDashYear(${y})">${y}</button>`
@@ -1844,40 +1946,13 @@ function setDashYear(y) { currentDashYear = y; renderDashboard(); }
 // ============================================================
 function formatExcuse(text) {
   if (!text) return '';
-  const lines = text.split(/\n|·/).map(s => s.trim()).filter(Boolean);
-  const nameAliases = { 'Haddai':'Christoph', 'Feyle':'Fabian', 'Oli':'Oliver' };
-  const resolveName = n => nameAliases[n] || n;
-
-  // Categorise each line
+  const { category, reasonText } = parseExcuseLines(text);
   const withReason = [], withoutReason = [], unexcused = [];
-
-  lines.forEach(line => {
-    // Extract name: everything before first "hat sich" or first ":"
-    let name = '', reason = '';
-    const noExcMatch = line.match(/^(.+?) hat sich nicht entsch\w*dig\w*/i);
-    const noReasonMatch = line.match(/^(.+?) hat sich entsch\w*dig\w* (?:aber )?(?:ohne|keine) Begr[üu]nd\w*/i);
-    const withReasonMatch = line.match(/^(.+?) hat sich entsch\w*dig\w* mit (?:der |)Begr[üu]nd\w*[,\s"]+(.+?)["\'\s]*$/i);
-    const colonMatch = line.match(/^(.+?):\s*(.*)$/);
-
-    if (noExcMatch) {
-      unexcused.push({ name: resolveName(noExcMatch[1].trim()), reason: '' });
-    } else if (noReasonMatch) {
-      withoutReason.push({ name: resolveName(noReasonMatch[1].trim()), reason: '' });
-    } else if (withReasonMatch) {
-      withReason.push({ name: resolveName(withReasonMatch[1].trim()), reason: withReasonMatch[2].trim().replace(/["\']/g,'') });
-    } else if (colonMatch) {
-      // Guess category from content
-      const r = colonMatch[2].toLowerCase();
-      const n = resolveName(colonMatch[1].trim());
-      const g = colonMatch[2].trim();
-      if (r.includes('nicht entsch') || r.includes('unentschuldigt')) {
-        unexcused.push({ name: n, reason: '' });
-      } else if (r.includes('ohne begr') || r.includes('keine begr')) {
-        withoutReason.push({ name: n, reason: '' });
-      } else {
-        withReason.push({ name: n, reason: g });
-      }
-    }
+  Object.keys(category).forEach(name => {
+    const entry = { name, reason: reasonText[name] || '' };
+    if (category[name] === 'unexcused') unexcused.push(entry);
+    else if (category[name] === 'no-reason') withoutReason.push(entry);
+    else withReason.push(entry);
   });
 
   // ── Render one category block ──────────────────────────────────────────────
@@ -1889,8 +1964,8 @@ function formatExcuse(text) {
         margin:0.2rem;flex-shrink:0">
         ${getAvatar(item.name,'sm')}
         <div>
-          <span style="font-weight:600;font-size:0.82rem;color:var(--text)">${item.name}</span>
-          ${item.reason ? `<div style="font-size:0.75rem;color:var(--muted);line-height:1.2;max-width:180px">${item.reason}</div>` : ''}
+          <span style="font-weight:600;font-size:0.82rem;color:var(--text)">${escapeHtml(item.name)}</span>
+          ${item.reason ? `<div style="font-size:0.75rem;color:var(--muted);line-height:1.2;max-width:180px">${escapeHtml(item.reason)}</div>` : ''}
         </div>
       </div>`).join('');
 
@@ -1933,7 +2008,7 @@ function formatExcuse(text) {
 }
 
 function renderTreffen() {
-  const years = [2023,2024,2025,2026];
+  const years = getAllYears();
   const tabsEl = document.getElementById('treffenYearTabs');
   tabsEl.innerHTML = years.map(y =>
     `<button class="year-tab ${y===currentTreffenYear?'active':''}" onclick="setTreffenYear(${y})">${y}</button>`
@@ -1951,31 +2026,8 @@ function renderTreffen() {
     const total = Object.values(t.attendance).reduce((a,b)=>a+b,0);
     const dateStr = new Date(t.date).toLocaleDateString('de-DE', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
 
-    // Parse excuse text into per-member lookup
-    const excuseByMember = {};
-    const excuseCategory = {}; // name -> 'ok'|'no-reason'|'unexcused'
-    const nameAliases = { 'Haddai':'Christoph', 'Feyle':'Fabian', 'Oli':'Oliver' };
-    const resolveName = n => nameAliases[n] || n;
-    if (t.excuse) {
-      const lines = t.excuse.split(/\n|·/).map(s=>s.trim()).filter(Boolean);
-      lines.forEach(line => {
-        // Tippfehler-tolerant: "entsch(u|ul)dig(t|ift|it)" statt nur "entschuldigt"
-        const noExc    = line.match(/^(.+?) hat sich nicht entsch\w*dig\w*/i);
-        const noReason = line.match(/^(.+?) hat sich entsch\w*dig\w* (?:aber )?(?:ohne|keine) Begr[üu]nd\w*/i);
-        const withR    = line.match(/^(.+?) hat sich entsch\w*dig\w* mit (?:der |)Begr[üu]nd\w*[,\s"]+(.+?)["\'\s]*$/i);
-        const colon    = line.match(/^(.+?):\s*(.+)$/);
-        if (noExc)    { const nm=resolveName(noExc[1].trim());   excuseCategory[nm]   = 'unexcused'; excuseByMember[nm]   = ''; }
-        else if (noReason) { const nm=resolveName(noReason[1].trim()); excuseCategory[nm] = 'no-reason'; excuseByMember[nm] = ''; }
-        else if (withR)    { const nm=resolveName(withR[1].trim());    excuseCategory[nm]    = 'ok';        excuseByMember[nm]    = withR[2].trim().replace(/["\']/g,''); }
-        else if (colon) {
-          const nm = resolveName(colon[1].trim()), gr = colon[2].trim();
-          const gl = gr.toLowerCase();
-          if (gl.includes('nicht entsch')||gl.includes('unentschuldigt')) { excuseCategory[nm]='unexcused'; excuseByMember[nm]=''; }
-          else if (gl.includes('ohne begr')||gl.includes('keine begr')) { excuseCategory[nm]='no-reason'; excuseByMember[nm]=''; }
-          else { excuseCategory[nm]='ok'; excuseByMember[nm]=gr; }
-        }
-      });
-    }
+    // Freitext einmalig zentral parsen (gemeinsame Funktion, siehe parseExcuseLines)
+    const { category: excuseCategory, reasonText: excuseByMember } = parseExcuseLines(t.excuse);
 
     // ── Badge helper ─────────────────────────────────────────────────────
     function badge(text, color, bg, border) {
@@ -2000,9 +2052,9 @@ function renderTreffen() {
       const reason = excuseByMember[m] || '';
       return `<tr style="border-bottom:0.5px solid var(--border)">
         <td style="padding:5px 8px;vertical-align:middle;width:30px">${getAvatar(m,'sm')}</td>
-        <td style="padding:5px 8px;font-size:13px;font-weight:500;vertical-align:middle;white-space:nowrap">${m}</td>
+        <td style="padding:5px 8px;font-size:13px;font-weight:500;vertical-align:middle;white-space:nowrap">${escapeHtml(m)}</td>
         <td style="padding:5px 8px;vertical-align:middle;white-space:nowrap">${statusBadge(m,val)}</td>
-        <td style="padding:5px 8px;font-size:11px;color:var(--muted);vertical-align:middle">${reason}</td>
+        <td style="padding:5px 8px;font-size:11px;color:var(--muted);vertical-align:middle">${escapeHtml(reason)}</td>
       </tr>`;
     }).join('');
 
@@ -2016,14 +2068,14 @@ function renderTreffen() {
       </tr>
       ${guestList.map(g => `<tr style="border-bottom:0.5px solid var(--border)">
         <td style="padding:5px 8px;vertical-align:middle">${getAvatar(g,'sm')}</td>
-        <td style="padding:5px 8px;font-size:13px;color:var(--muted);vertical-align:middle">${g}</td>
+        <td style="padding:5px 8px;font-size:13px;color:var(--muted);vertical-align:middle">${escapeHtml(g)}</td>
         <td style="padding:5px 8px" colspan="2">${badge('Gast','#0C447C','#E6F1FB','#85B7EB')}</td>
       </tr>`).join('')}` : '';
 
     const noteRow = t.note ? `
       <div style="margin-top:8px;padding:6px 10px;background:var(--surface2);border-left:2px solid var(--gold);border-radius:0;font-size:12px;color:var(--text)">
         <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--gold);display:block;margin-bottom:2px">📝 Bemerkung</span>
-        ${t.note}
+        ${escapeHtml(t.note)}
       </div>` : '';
 
     const adminBar = isAdmin ? `
@@ -2039,7 +2091,7 @@ function renderTreffen() {
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
         <div>
           <div class="treffen-date">${dateStr}</div>
-          <div class="treffen-ort" style="margin-top:3px">${getLocationAvatar(t.ort||'','sm')} ${t.ort && t.ort!=='-' ? t.ort : 'Kein Ort'}</div>
+          <div class="treffen-ort" style="margin-top:3px">${getLocationAvatar(t.ort||'','sm')} ${escapeHtml(t.ort && t.ort!=='-' ? t.ort : 'Kein Ort')}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:1.4rem;font-weight:700;color:var(--gold);line-height:1">${total}</div>
@@ -2158,7 +2210,7 @@ function buildYearChart(year, treffen, members) {
 }
 
 function renderOverall() {
-  const years = [2023,2024,2025,2026];
+  const years = getAllYears();
   const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
 
   // Compute totals per member across all years
@@ -2330,6 +2382,11 @@ function renderAdmin() {
   renderMemberList();
   renderStatutenAdmin();
   renderManageLists();
+  const printYearSel = document.getElementById('printYear');
+  if (printYearSel) {
+    const years = getAllYears().slice().sort((a,b) => b-a); // neuestes zuerst
+    printYearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  }
 }
 
 function memberAttRow(m, prefix) {
@@ -2481,6 +2538,7 @@ function saveTreffen() {
   document.getElementById('newExcuse').value = '';
   document.getElementById('newBemerkung').value = '';
   renderAttendanceGrid();
+  renderDashboard(); // Testschleife: Plausibilität nach jeder Änderung neu prüfen
 }
 
 function showMsg(msg, ok) {
@@ -2781,7 +2839,7 @@ function exportToExcel() {
     return;
   }
 
-  const years = [2023, 2024, 2025, 2026];
+  const years = getAllYears();
   const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
   const wb = XLSX.utils.book_new();
 
@@ -2889,13 +2947,43 @@ function exportToExcel() {
 // ============================================================
 // PRINT DASHBOARD
 // ============================================================
+// ============================================================
+// TESTSCHLEIFE: Vollständiger Integritäts-Check über alle Jahre
+// ============================================================
+function runFullIntegrityCheck() {
+  const years = getAllYears();
+  const el = document.getElementById('integrityCheckResult');
+  if (!el) return;
+
+  let allOk = true;
+  const sections = years.map(year => {
+    const check = computePlausibility(year);
+    if (!check.ok) allOk = false;
+    const realIssues = check.issues.filter(i => !i.startsWith('ℹ️'));
+    const infoIssues = check.issues.filter(i => i.startsWith('ℹ️'));
+    const color = realIssues.length ? 'var(--danger)' : 'var(--success)';
+    const icon = realIssues.length ? '⚠️' : '✅';
+    return `<div style="margin-bottom:0.75rem;padding:0.6rem 0.8rem;background:var(--surface2);border-radius:8px;border-left:3px solid ${color}">
+      <div style="font-weight:600;font-size:0.88rem;color:${color}">${icon} ${year}: ${realIssues.length ? realIssues.length + ' Auffälligkeit(en)' : 'alles in Ordnung'}</div>
+      ${realIssues.map(i => `<div style="font-size:0.8rem;color:var(--text);margin-top:0.3rem">${escapeHtml(i)}</div>`).join('')}
+      ${infoIssues.map(i => `<div style="font-size:0.75rem;color:var(--muted);margin-top:0.3rem">${escapeHtml(i)}</div>`).join('')}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="margin-bottom:0.75rem;font-weight:600;color:${allOk ? 'var(--success)' : 'var(--danger)'}">
+      ${allOk ? '✅ Alle Jahre plausibel' : '⚠️ Es gibt Auffälligkeiten'}
+    </div>
+    ${sections}`;
+}
+
 function printDashboard() {
   const year = parseInt(document.getElementById('printYear').value);
   setDashYear(year);
 
   // Collect all data
   const ys = getYearStats(year);
-  const years = [2023,2024,2025,2026];
+  const years = getAllYears();
   const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
   const ranked = members.map(m => ({name:m, pts:ys.totals[m]||0, pct:(ys.totals[m]||0)/ys.maxP})).sort((a,b)=>b.pts-a.pts);
   const maxPts = ranked[0]?.pts||1;
@@ -3168,7 +3256,7 @@ function renderManageList(type) {
         ${type==='loc' ? getLocationAvatar(item,'sm') : getAvatar(item,'sm')}
         <span style="position:absolute;bottom:-2px;right:-2px;font-size:0.5rem;background:var(--gold2);color:white;border-radius:50%;width:12px;height:12px;display:flex;align-items:center;justify-content:center">✏</span>
       </span>
-      <span style="flex:1">${item}</span>
+      <span style="flex:1">${escapeHtml(item)}</span>
       <div style="display:flex;gap:0.3rem">
         <button class="att-btn" style="font-size:0.75rem;padding:0.2rem 0.5rem;color:var(--gold);border-color:rgba(42,95,168,0.3)"
           onclick="openRenamePanel('${type}','${item.replace(/'/g,"\\'")}')">✏</button>
@@ -3269,41 +3357,6 @@ function doRename() {
 let editingDate = null;
 let editTempAtt = {};
 
-function loadEditList() {
-  const year = parseInt(document.getElementById('editYear').value);
-  // Use getAllTreffen which already deduplicates (Supabase overrides historical)
-  const allTreffen = getAllTreffen(year); // already sorted desc
-
-  const el = document.getElementById('editTreffenList');
-  if (!allTreffen.length) {
-    el.innerHTML = '<p style="color:var(--muted);font-size:0.9rem;padding:0.5rem 0">Keine Treffen in diesem Jahr.</p>';
-    return;
-  }
-
-  const members = historicalData[year]?.members || appData.members;
-  el.innerHTML = allTreffen.map(t => {
-    const ausgefallen = !t.ort || t.ort==='-' || Object.values(t.attendance||{}).every(v=>v===0);
-    const dateStr = new Date(t.date).toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
-    const present = members.filter(m=>(t.attendance?.[m]||0)>0);
-    const presentDots = present.map(m => `${getAvatar(m,'sm')}`).join('');
-    return `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0.75rem;margin-bottom:0.3rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
-          <span style="font-weight:600;font-size:0.88rem;white-space:nowrap">${dateStr}</span>
-          ${ausgefallen
-            ? '<span style="color:var(--danger);font-size:0.78rem">⚠ Ausgefallen</span>'
-            : `<span style="color:var(--muted);font-size:0.8rem">${getLocationAvatar(t.ort||'','sm')} ${t.ort||'-'}</span>`}
-        </div>
-        <div style="display:flex;gap:2px;margin-top:4px">${presentDots}</div>
-      </div>
-      <div style="display:flex;gap:0.35rem;flex-shrink:0">
-        <button class="att-btn" style="color:var(--gold);border-color:rgba(42,95,168,0.3);font-size:0.8rem;padding:0.3rem 0.6rem" onclick="openEditForm('${t.date}')">✏</button>
-        <button class="att-btn" style="color:var(--danger);border-color:rgba(176,48,48,0.3);font-size:0.8rem;padding:0.3rem 0.6rem" onclick="deleteFromAdmin('${t.date}')">🗑</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
 function openEditForm(date) {
   const year = parseInt(date.substring(0,4));
   const hist = historicalData[year];
@@ -3399,13 +3452,11 @@ function saveEditTreffen() {
   saveTreffenToSupabase(updated)
     .then(() => {
       showMsg('✅ Treffen vom ' + new Date(updated.date).toLocaleDateString('de-DE') + ' aktualisiert!', true);
-      loadEditList();
       renderDashboard();
       renderTreffen();
     })
     .catch(err => {
       showMsg('⚠️ Fehler beim Speichern: ' + err.message, false);
-      loadEditList();
     });
 }
 
@@ -3414,26 +3465,12 @@ function closeEditForm() {
   editingDate = null;
 }
 
-function deleteFromAdmin(date) {
-  if (!confirm('Treffen vom ' + new Date(date).toLocaleDateString('de-DE') + ' wirklich löschen?')) return;
-  appData.treffen = appData.treffen.filter(t => t.date !== date);
-  // Also remove from in-memory historical data
-  Object.values(historicalData).forEach(yr => {
-    yr.treffen = yr.treffen.filter(t => t.date !== date);
-  });
-  saveData();
-  deleteTreffenFromSupabase(date);
-  if (editingDate === date) closeEditForm();
-  loadEditList();
-  showMsg('Treffen gelöscht ✓', true);
-}
-
 // INIT
 loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v7.7 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v7.9 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
