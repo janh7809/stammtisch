@@ -118,18 +118,25 @@
 
   /* STATS GRID */
   .stats-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 0.75rem;
     margin-bottom: 2rem;
+  }
+  @media (max-width: 480px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
   }
   .stat-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1.25rem;
+    border-radius: var(--radius); padding: 1.1rem 1.25rem;
+    display: flex; flex-direction: column;
     transition: border-color 0.2s;
   }
   .stat-card:hover { border-color: rgba(42,95,168,0.3); }
-  .stat-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-  .stat-value { font-size: 1.8rem; font-weight: 600; color: var(--gold2); }
-  .stat-sub { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+  .stat-label {
+    color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 0.5rem; line-height: 1.3; min-height: 2.6em; display: flex; align-items: flex-start;
+  }
+  .stat-value { font-size: 1.7rem; font-weight: 600; color: var(--gold2); line-height: 1.1; }
+  .stat-sub { font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem; }
 
   /* RANKING TABLE */
   .section-title {
@@ -478,6 +485,7 @@
   <table class="ranking-table" id="rankingTable"></table>
   <div id="dashMemberChart"></div>
   <div id="extraStats"></div>
+  <div id="dashPlausibility"></div>
 </div>
 
 <div id="print-page-break"></div>
@@ -788,6 +796,50 @@ function saveAvatars() {
   localStorage.setItem('st_location_avatars', JSON.stringify(locationAvatarData));
   sbSetMeta('person_avatars',   personAvatarData);
   sbSetMeta('location_avatars', locationAvatarData);
+}
+
+// ============================================================
+// GAST → STAMMMITGLIED (memberSince)
+// ============================================================
+// appData.memberSince: { name: "YYYY-MM-DD" } — nur für nachträglich beigetretene Mitglieder gesetzt.
+// Kein Eintrag = seit jeher Mitglied (die ursprünglichen 6 sowie alle historischen Jahres-Mitglieder).
+let memberSinceData = JSON.parse(localStorage.getItem('st_member_since') || '{}');
+
+function saveMemberSince() {
+  localStorage.setItem('st_member_since', JSON.stringify(memberSinceData));
+  sbSetMeta('member_since', memberSinceData);
+}
+
+// War `name` an `dateStr` (YYYY-MM-DD) bereits offizielles Mitglied?
+function isActiveMember(name, dateStr) {
+  const since = memberSinceData[name];
+  return !since || dateStr >= since;
+}
+
+// Alle jemals bekannten Mitglieder (historisch + aktuell) — für Übersichten über alle Jahre.
+function getAllKnownMembers() {
+  const set = new Set(appData.members);
+  Object.values(historicalData).forEach(h => { if (h.members) h.members.forEach(m => set.add(m)); });
+  return Array.from(set);
+}
+
+// Effektive Mitgliederliste für ein Jahr: historische Liste (falls vorhanden) plus
+// aktuelle Mitglieder, deren "Mitglied seit"-Datum in dieses Jahr oder früher fällt.
+function getEffectiveMembers(year) {
+  const hist = historicalData[year];
+  const base = hist ? [...hist.members] : [];
+  const yearEnd = `${year}-12-31`;
+  appData.members.forEach(m => {
+    if (base.includes(m)) return;
+    const since = memberSinceData[m];
+    if (!since || since <= yearEnd) base.push(m);
+  });
+  return base.length ? base : [...appData.members];
+}
+
+// Aus einer Mitgliederliste nur die an `dateStr` bereits aktiven filtern.
+function activeMembersForDate(members, dateStr) {
+  return members.filter(m => isActiveMember(m, dateStr));
 }
 
 // People (members + guests) — emoji only, no images (Datenschutz)
@@ -1342,6 +1394,67 @@ function getYearStats(year) {
 }
 
 // ============================================================
+// SHARED: Entschuldigungskategorien (genutzt von Dashboard UND Ausdruck)
+// ============================================================
+function computeExcuseCategories(year) {
+  const hist = historicalData[year];
+  const members = hist ? hist.members : appData.members;
+  const noEx = {}, noReason = {};
+  members.forEach(m => { noEx[m] = 0; noReason[m] = 0; });
+  if (hist && hist.unexcused) {
+    Object.values(hist.unexcused).forEach(mList => mList.forEach(m => { if (noEx[m] !== undefined) noEx[m]++; }));
+  }
+  if (hist && hist.excused_no_reason) {
+    members.forEach(m => { noReason[m] += hist.excused_no_reason[m] || 0; });
+  }
+  // Nur neue/bearbeitete Treffen (Supabase) per Text erkennen — historische Jahre sind bereits
+  // über hist.unexcused/hist.excused_no_reason kuratiert erfasst; ein erneutes Scannen aller
+  // Treffen (inkl. historischer) würde dieselben Fälle doppelt zählen.
+  appData.treffen.filter(t => new Date(t.date).getFullYear() === year).forEach(t => {
+    if (!t.excuse) return;
+    members.forEach(m => {
+      const aliases = m === 'Oliver' ? ['Oliver','Oli'] : m === 'Fabian' ? ['Fabian','Feyle'] : [m];
+      for (const alias of aliases) {
+        if (new RegExp(alias + '.*?hat sich nicht entschuldigt', 'i').test(t.excuse)) { noEx[m]++; break; }
+        else if (new RegExp(alias + '.*?(ohne Begründung|keine Begründung)', 'i').test(t.excuse)) { noReason[m]++; break; }
+      }
+    });
+  });
+  return { members, noEx, noReason };
+}
+
+// ============================================================
+// SHARED: Plausibilitätsprüfung (genutzt von Dashboard UND Ausdruck)
+// ============================================================
+function computePlausibility(year) {
+  const ys = getYearStats(year);
+  const { members, noEx, noReason } = computeExcuseCategories(year);
+  const issues = [];
+
+  // Check 1: erfasste Termine vs. mögliche Termine — "fehlen noch" nur für bereits abgeschlossene Jahre sinnvoll
+  const entered = ys.treffen.length;
+  const currentRealYear = new Date().getFullYear();
+  if (entered > ys.maxP) {
+    issues.push(`${entered} Termine erfasst, aber nur ${ys.maxP} möglich (${entered - ys.maxP} zu viel — evtl. Duplikate).`);
+  } else if (entered < ys.maxP && year < currentRealYear) {
+    issues.push(`Nur ${entered} von ${ys.maxP} möglichen Terminen erfasst (${ys.maxP - entered} fehlen).`);
+  }
+
+  // Check 2: kategorisierte Abwesenheiten dürfen tatsächliche Abwesenheiten nicht übersteigen
+  const isAusgefallen = t => !t.ort || t.ort === '-' || Object.values(t.attendance||{}).every(v => v === 0);
+  const realTreffen = ys.treffen.filter(t => !isAusgefallen(t));
+  members.forEach(m => {
+    const absent = realTreffen.filter(t => (t.attendance[m]||0) === 0).length;
+    const categorized = (noEx[m]||0) + (noReason[m]||0);
+    if (categorized > absent) {
+      issues.push(`${m}: ${categorized} kategorisierte Abwesenheiten (unentschuldigt/ohne Begründung), aber nur ${absent} tatsächliche Abwesenheiten bei stattgefundenen Treffen.`);
+    }
+  });
+
+  return { ok: issues.length === 0, issues, entered, expected: ys.maxP };
+}
+
+// ============================================================
 // RENDER DASHBOARD
 // ============================================================
 function renderDashboard() {
@@ -1397,6 +1510,34 @@ function renderDashboard() {
 
   renderExtraStats(treffen, members, stattgefunden);
   renderMemberLineChart(treffen, members);
+  renderPlausibility(currentDashYear);
+}
+
+function renderPlausibility(year) {
+  const el = document.getElementById('dashPlausibility');
+  if (!el) return;
+  const check = computePlausibility(year);
+  if (check.ok) {
+    el.innerHTML = `
+      <div style="background:rgba(42,150,80,0.08);border:1px solid rgba(42,150,80,0.25);border-radius:var(--radius);padding:1rem 1.25rem;margin-top:1.5rem;display:flex;align-items:center;gap:0.6rem">
+        <span style="font-size:1.3rem">✅</span>
+        <div>
+          <div style="font-weight:600;color:var(--success);font-size:0.92rem">Plausibilitätsprüfung ${year}: alles in Ordnung</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-top:0.15rem">${check.entered} von ${check.expected} möglichen Terminen erfasst, alle Entschuldigungs-Zahlen stimmig.</div>
+        </div>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div style="background:rgba(224,123,57,0.08);border:1px solid rgba(224,123,57,0.3);border-radius:var(--radius);padding:1rem 1.25rem;margin-top:1.5rem">
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem">
+          <span style="font-size:1.3rem">⚠️</span>
+          <div style="font-weight:600;color:var(--amber);font-size:0.92rem">Plausibilitätsprüfung ${year}: ${check.issues.length} Auffälligkeit${check.issues.length>1?'en':''} gefunden</div>
+        </div>
+        <ul style="margin:0 0 0 1.8rem;padding:0">
+          ${check.issues.map(i => `<li style="font-size:0.85rem;color:var(--text);margin-bottom:0.3rem;line-height:1.4">${i}</li>`).join('')}
+        </ul>
+      </div>`;
+  }
 }
 
 const memberColors = {
@@ -1571,6 +1712,8 @@ function renderExtraStats(treffen, members, stattgefunden) {
   });
   const sortedByStreak = [...members].sort((a,b) => streaks[b]-streaks[a]);
   const streakWinner = sortedByStreak[0];
+  const maxStreakVal = streaks[streakWinner] || 0;
+  const streakWinners = sortedByStreak.filter(m => streaks[m] === maxStreakVal && maxStreakVal > 0);
 
   function formatStreakRange(m) {
     const r = streakRanges[m];
@@ -1589,7 +1732,9 @@ function renderExtraStats(treffen, members, stattgefunden) {
       });
     }
   });
-  const topLoc = Object.entries(locs).sort((a,b)=>b[1]-a[1])[0];
+  const sortedLocsDash = Object.entries(locs).sort((a,b)=>b[1]-a[1]);
+  const topLoc = sortedLocsDash[0];
+  const topLocs = topLoc ? sortedLocsDash.filter(([,n]) => n === topLoc[1]) : [];
 
   // 3. Stammtische mit ALLEN Mitgliedern
   const allPresent = treffen.filter(t => members.every(m => (t.attendance[m]||0) > 0));
@@ -1603,33 +1748,7 @@ function renderExtraStats(treffen, members, stattgefunden) {
   });
 
   // 5. Three absence categories from pre-extracted data + custom treffen
-  const hist = historicalData[currentDashYear];
-  const noExcuse   = {};  // unentschuldigt
-  const excNoReason = {}; // entschuldigt ohne Begründung
-  members.forEach(m => { noExcuse[m] = 0; excNoReason[m] = 0; });
-
-  // Historical unexcused (from red cells)
-  if (hist && hist.unexcused) {
-    Object.values(hist.unexcused).forEach(mList => {
-      mList.forEach(m => { if (noExcuse[m] !== undefined) noExcuse[m]++; });
-    });
-  }
-  // Historical excused-no-reason
-  if (hist && hist.excused_no_reason) {
-    members.forEach(m => { excNoReason[m] += hist.excused_no_reason[m] || 0; });
-  }
-
-  // Custom treffen: parse reason tags stored via setReason
-  appData.treffen.filter(t => new Date(t.date).getFullYear() === currentDashYear).forEach(t => {
-    if (!t.excuse) return;
-    members.forEach(m => {
-      const aliases = m === 'Oliver' ? ['Oliver','Oli'] : m === 'Fabian' ? ['Fabian','Feyle'] : [m];
-      for (const alias of aliases) {
-        if (new RegExp(alias + '.*?hat sich nicht entschuldigt', 'i').test(t.excuse)) { noExcuse[m]++; break; }
-        if (new RegExp(alias + '.*?(ohne Begründung|keine Begründung)', 'i').test(t.excuse)) { excNoReason[m]++; break; }
-      }
-    });
-  });
+  const { noEx: noExcuse, noReason: excNoReason } = computeExcuseCategories(currentDashYear);
 
   // excused WITH reason = total absences (from treffen data) - unexcused - excused_no_reason
   const excWithReason = {};
@@ -1666,14 +1785,14 @@ function renderExtraStats(treffen, members, stattgefunden) {
     <div class="extra-stats-grid">
       <div class="extra-card">
         <div class="ec-title">🔥 Längste Teilnahme-Serie</div>
-        <div class="ec-winner">🏅 ${streakWinner}</div>
-        <div class="ec-sub">${streaks[streakWinner]} Stammtische in Folge${formatStreakRange(streakWinner) ? ' · ' + formatStreakRange(streakWinner) : ''}</div>
+        <div class="ec-winner" style="display:flex;flex-wrap:wrap;align-items:center;gap:0.4rem">${streakWinners.map(m=>`<span style="display:inline-flex;align-items:center;gap:0.3rem">🏅 ${getAvatar(m,'sm')}${m}</span>`).join('')}</div>
+        <div class="ec-sub">${maxStreakVal} Stammtische in Folge${streakWinners.length>1?' · Gleichstand':(formatStreakRange(streakWinner)?' · '+formatStreakRange(streakWinner):'')}</div>
         <div style="margin-top:0.75rem">${sortedByStreak.map((m,i)=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid var(--border)"><span style="font-size:0.75rem;color:var(--muted);min-width:16px">${i+1}.</span>${getAvatar(m,'sm')}<div style="flex:1;min-width:0"><div style="font-size:0.85rem">${m}</div>${formatStreakRange(m) ? `<div style="font-size:0.7rem;color:var(--muted)">${formatStreakRange(m)}</div>` : ''}</div><span style="color:var(--gold2);font-weight:500;flex-shrink:0">${streaks[m]}×</span></div>`).join('')}</div>
       </div>
       <div class="extra-card">
         <div class="ec-title">📍 Meistbesuchte Location</div>
-        ${topLoc ? `<div class="ec-winner" style="display:flex;align-items:center;gap:0.5rem">${getLocationAvatar(topLoc[0])} ${topLoc[0]}</div><div class="ec-sub">${topLoc[1]}× besucht</div>
-        <div style="margin-top:0.75rem">${Object.entries(locs).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([l,n])=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.22rem 0;border-bottom:1px solid var(--border)">${getLocationAvatar(l,'sm')}<span style="flex:1;font-size:0.85rem">${l}</span><span style="color:var(--gold2)">${n}×</span></div>`).join('')}</div>` : '<div class="ec-sub">Keine Daten</div>'}
+        ${topLoc ? `<div class="ec-winner" style="display:flex;flex-wrap:wrap;align-items:center;gap:0.4rem">${topLocs.map(([l])=>`<span style="display:inline-flex;align-items:center;gap:0.3rem">${getLocationAvatar(l,'sm')}${l}</span>`).join('')}</div><div class="ec-sub">${topLoc[1]}× besucht${topLocs.length>1?' · Gleichstand':''}</div>
+        <div style="margin-top:0.75rem">${sortedLocsDash.slice(0,6).map(([l,n])=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.22rem 0;border-bottom:1px solid var(--border)">${getLocationAvatar(l,'sm')}<span style="flex:1;font-size:0.85rem">${l}</span><span style="color:var(--gold2)">${n}×</span></div>`).join('')}</div>` : '<div class="ec-sub">Keine Daten</div>'}
       </div>
       <div class="extra-card">
         <div class="ec-title">🌟 Stammtische mit ALLEN Mitgliedern</div>
@@ -2798,23 +2917,9 @@ function printDashboard() {
   const streakRows = [...members].sort((a,b)=>streaks[b]-streaks[a])
     .map((m,i) => '<tr><td>'+(i+1)+'.</td><td>'+av(m,'person')+m+'</td><td>'+streaks[m]+'×</td></tr>').join('');
 
-  // Entschuldigungskategorien: mit Begründung / ohne Begründung / unentschuldigt
+  // Entschuldigungskategorien: mit Begründung / ohne Begründung / unentschuldigt (gleiche Funktion wie Dashboard)
   const hist = historicalData[year];
-  const noEx={}, noReason={};
-  members.forEach(m=>{noEx[m]=0; noReason[m]=0;});
-  if(hist&&hist.unexcused) Object.values(hist.unexcused).forEach(ml=>ml.forEach(m=>{if(noEx[m]!==undefined)noEx[m]++;}));
-  if(hist&&hist.excused_no_reason) members.forEach(m=>{noReason[m]+=(hist.excused_no_reason[m]||0);});
-  // custom treffen: parse reason tags
-  getAllTreffen(year).forEach(t => {
-    if (!t.excuse) return;
-    members.forEach(m => {
-      const aliases = m === 'Oliver' ? ['Oliver','Oli'] : m === 'Fabian' ? ['Fabian','Feyle'] : [m];
-      for (const alias of aliases) {
-        if (new RegExp(alias + '.*?hat sich nicht entschuldigt', 'i').test(t.excuse)) { noEx[m]++; break; }
-        if (new RegExp(alias + '.*?(ohne Begründung|keine Begründung)', 'i').test(t.excuse)) { noReason[m]++; break; }
-      }
-    });
-  });
+  const { noEx, noReason } = computeExcuseCategories(year);
   const withReason = {};
   members.forEach(m => {
     const totalAbsent = ys.treffen.filter(t => (t.attendance[m]||0) === 0).length;
@@ -2862,14 +2967,32 @@ function printDashboard() {
       '</div>';
   }).join('');
 
-  // Overall locations
-  const allLocs={};
-  years.forEach(y=>getAllTreffen(y).forEach(t=>{
-    if(!t.ort||t.ort==='-') return;
-    t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(l=>{l=l.trim();if(l)allLocs[l]=(allLocs[l]||0)+1;});
-  }));
-  const allLocRows = Object.entries(allLocs).sort((a,b)=>b[1]-a[1]).slice(0,12)
-    .map(([l,n],i) => '<tr><td>'+(i+1)+'.</td><td>'+av(l,'loc')+l+'</td><td>'+n+'×</td></tr>').join('');
+  // Locations pro Jahr + Top 3 gesamt — mirrors website structure (v6.1)
+  const yearLocsAllPrint = {};
+  const allLocs = {};
+  years.forEach(y => {
+    const lm = {};
+    getAllTreffen(y).forEach(t => {
+      if (!t.ort || t.ort === '-') return;
+      t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(l => {
+        l = l.trim(); if (!l) return;
+        lm[l] = (lm[l]||0) + 1;
+        allLocs[l] = (allLocs[l]||0) + 1;
+      });
+    });
+    yearLocsAllPrint[y] = Object.entries(lm).sort((a,b)=>b[1]-a[1]);
+  });
+  const top3LocsPrint = Object.entries(allLocs).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+  const yearLocCardsPrint = years.map(y => {
+    const rows = yearLocsAllPrint[y].slice(0,6)
+      .map(([l,n],i) => '<div class="srow"><span>'+(i+1)+'. '+av(l,'loc')+l+'</span><b>'+n+'×</b></div>').join('');
+    return '<div class="card"><h3>📍 '+y+'</h3>'+(rows||'<div class="meta">Keine Daten</div>')+'</div>';
+  }).join('');
+
+  const top3LocsRowsPrint = top3LocsPrint
+    .map(([l,n],i) => '<div class="srow"><span>'+['🥇','🥈','🥉'][i]+' '+av(l,'loc')+l+'</span><b>'+n+'×</b></div>').join('')
+    || '<div class="meta">Keine Daten</div>';
 
   // Stammtische mit ALLEN Mitgliedern + Ø Teilnehmer/Treffen — gleiche Logik wie im Dashboard
   const allPresentTreffen = ys.treffen.filter(t => members.every(m => (t.attendance[m]||0) > 0));
@@ -2886,24 +3009,68 @@ function printDashboard() {
     ? allPresentTreffen.map(t => new Date(t.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})).join(', ')
     : 'Noch keiner';
 
+  // Plausibilitätsprüfung — gleiche Funktion wie Dashboard
+  const plausCheck = computePlausibility(year);
+  const plausHtml = plausCheck.ok
+    ? '<div class="card" style="background:#eaf6ee;border-color:#8fd4a5">✅ Plausibilitätsprüfung: alles in Ordnung — '+plausCheck.entered+' von '+plausCheck.expected+' möglichen Terminen erfasst.</div>'
+    : '<div class="card" style="background:#fdf3e8;border-color:#f0c088"><b>⚠️ Plausibilitätsprüfung: '+plausCheck.issues.length+' Auffälligkeit(en)</b><ul style="margin:4px 0 0 16px;padding:0">'
+      + plausCheck.issues.map(i=>'<li style="margin-bottom:2px">'+i+'</li>').join('') + '</ul></div>';
+
+  // Jahresverlauf-Mini-Chart (Teilnehmer pro Treffen) — Pendant zum Dashboard-Diagramm
+  let chartSvg = '<div class="meta">Nicht genug Daten für ein Diagramm.</div>';
+  const chartData = ys.treffen.filter(t => Object.values(t.attendance||{}).some(v=>v>0)).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if (chartData.length >= 2) {
+    const CW=1000, CH=160, PAD={t:10,r:15,b:38,l:24};
+    const cw=CW-PAD.l-PAD.r, ch=CH-PAD.t-PAD.b;
+    const n=chartData.length, maxM=members.length;
+    const xPos = i => PAD.l + (n>1 ? i/(n-1) : 0.5)*cw;
+    const yPos = v => PAD.t + ch - (v/maxM)*ch;
+    function bez(pts) {
+      let d = 'M '+pts[0].x+','+pts[0].y;
+      for (let i=1;i<pts.length;i++) { const p=pts[i-1],c=pts[i]; const cpx=(p.x+c.x)/2; d += ' C '+cpx+','+p.y+' '+cpx+','+c.y+' '+c.x+','+c.y; }
+      return d;
+    }
+    let svg = '<svg viewBox="0 0 '+CW+' '+CH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;overflow:visible">';
+    for (let v=0; v<=maxM; v++) {
+      const y=yPos(v);
+      svg += '<line x1="'+PAD.l+'" y1="'+y+'" x2="'+(CW-PAD.r)+'" y2="'+y+'" stroke="#c8d4e8" stroke-width="0.6"/>';
+      svg += '<text x="'+(PAD.l-5)+'" y="'+(y+2.5)+'" text-anchor="end" font-size="7" fill="#6a7a96">'+v+'</text>';
+    }
+    const totals = chartData.map((t,i) => {
+      const cnt = members.filter(m=>(t.attendance[m]||0)>0).length;
+      return {x:xPos(i), y:yPos(cnt), cnt, date:t.date, ort:t.ort};
+    });
+    const areaPts = totals.map(p=>p.x+','+p.y).join(' ');
+    const areaFull = PAD.l+','+(PAD.t+ch)+' '+areaPts+' '+totals[totals.length-1].x+','+(PAD.t+ch);
+    svg += '<polygon points="'+areaFull+'" fill="#eef2f8" stroke="none"/>';
+    svg += '<path d="'+bez(totals)+'" fill="none" stroke="#1a3f7a" stroke-width="1.6"/>';
+    totals.forEach(p => { svg += '<circle cx="'+p.x+'" cy="'+p.y+'" r="2" fill="#1a3f7a"/>'; });
+    totals.forEach(p => {
+      const d2=new Date(p.date); const ds=d2.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+      svg += '<text transform="translate('+p.x+','+(PAD.t+ch+9)+') rotate(45)" text-anchor="start" font-size="6" fill="#6a7a96">'+ds+'</text>';
+    });
+    svg += '</svg>';
+    chartSvg = svg;
+  }
+
   const css = `*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font-family:'DM Sans',system-ui,sans-serif;font-size:10px;color:#1a2540;background:white}
-@page{size:A3 landscape;margin:1cm}
+body{font-family:'DM Sans',system-ui,sans-serif;font-size:12px;color:#1a2540;background:white}
+@page{size:A3 landscape;margin:0.8cm}
 @media screen{body{padding:20px}.pagebreak{margin-bottom:30px;border-bottom:2px dashed #ccc;padding-bottom:20px}}
-@media print{.pagebreak{page-break-after:always}}
-h1{font-family:Georgia,serif;font-size:20px;color:#1a3f7a;margin-bottom:4px}
-h2{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1a3f7a;border-bottom:1.5px solid #c8d4e8;padding-bottom:3px;margin:8px 0 5px}
-h3{font-size:10px;font-weight:600;color:#1a3f7a;margin-bottom:4px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
-.card{background:#f4f7fc;border:.5px solid #c8d4e8;border-radius:5px;padding:5px 7px}
-.num{font-size:18px;font-weight:700;color:#1a3f7a}.lbl{font-size:8px;color:#6a7a96;text-transform:uppercase}
-.srow{display:flex;justify-content:space-between;padding:2px 0;border-bottom:.5px solid #e8eef5;font-size:9.5px}
-table{width:100%;border-collapse:collapse;font-size:9.5px}
-th{background:#eef2f8;color:#1a3f7a;padding:3px 5px;text-align:left;font-size:8.5px;text-transform:uppercase;border-bottom:1px solid #c8d4e8}
-td{padding:3px 5px;border-bottom:.5px solid #eef2f8}
-.meta{font-size:8px;color:#6a7a96}`;
+@media print{.pagebreak{page-break-after:always}.page{page-break-inside:avoid}}
+h1{font-family:Georgia,serif;font-size:26px;color:#1a3f7a;margin-bottom:4px}
+h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1a3f7a;border-bottom:2px solid #c8d4e8;padding-bottom:4px;margin:10px 0 6px}
+h3{font-size:12px;font-weight:600;color:#1a3f7a;margin-bottom:5px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.card{background:#f4f7fc;border:.5px solid #c8d4e8;border-radius:6px;padding:7px 9px}
+.num{font-size:23px;font-weight:700;color:#1a3f7a}.lbl{font-size:9.5px;color:#6a7a96;text-transform:uppercase}
+.srow{display:flex;justify-content:space-between;padding:3px 0;border-bottom:.5px solid #e8eef5;font-size:11.5px}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th{background:#eef2f8;color:#1a3f7a;padding:4px 6px;text-align:left;font-size:10px;text-transform:uppercase;border-bottom:1px solid #c8d4e8}
+td{padding:4px 6px;border-bottom:.5px solid #eef2f8}
+.meta{font-size:9.5px;color:#6a7a96}`;
 
   const p1 = '<div class="page pagebreak">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;border-bottom:2px solid #1a3f7a;padding-bottom:5px">' +
@@ -2911,6 +3078,7 @@ td{padding:3px 5px;border-bottom:.5px solid #eef2f8}
     '<div class="meta" style="text-align:right">stammtisch-five.vercel.app</div></div>' +
     '<div class="grid4" style="grid-template-columns:repeat(6,1fr)">'+statCards+'</div>' +
     '<div class="card" style="margin-bottom:8px"><div class="lbl">📅 Daten mit allen Mitgliedern anwesend</div><div style="font-size:9.5px;margin-top:2px">'+allPresentDatesStr+'</div></div>' +
+    '<div style="margin-bottom:8px"><h2>📈 Jahresverlauf — Teilnehmer pro Treffen</h2>'+chartSvg+'</div>' +
     '<div class="grid4" style="grid-template-columns:1.3fr 1fr 1fr 1fr">' +
     '<div><h2>Rangliste</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Teiln.</th><th>Quote</th></tr></thead><tbody>'+rankRows+'</tbody></table></div>' +
     '<div><h2>Locations</h2><table><thead><tr><th>#</th><th>Ort</th><th>Besuche</th></tr></thead><tbody>'+locRows+'</tbody></table>' +
@@ -2919,15 +3087,20 @@ td{padding:3px 5px;border-bottom:.5px solid #eef2f8}
     '<div><h2>Entsch. m. Begr.</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Anz.</th></tr></thead><tbody>'+withReasonRows+'</tbody></table>' +
     '<h2>Entsch. o. Begr.</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Anz.</th></tr></thead><tbody>'+noReasonRows+'</tbody></table>' +
     '<h2>Unentschuldigt</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Anz.</th></tr></thead><tbody>'+unexRows+'</tbody></table></div>' +
-    '</div></div>';
+    '</div>' +
+    '<div style="margin-top:8px">'+plausHtml+'</div>' +
+    '</div>';
 
   const p2 = '<div class="page">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;border-bottom:2px solid #1a3f7a;padding-bottom:5px">' +
     '<div><h1>🍺 Stammtisch Overall Statistik</h1><div class="meta">Alle Jahre · Gedruckt '+new Date().toLocaleDateString('de-DE')+'</div></div></div>' +
     '<div class="grid2">' +
-    '<div><h2>Gesamtübersicht</h2><table><thead><tr><th>#</th><th>Mitglied</th>'+years.map(y=>'<th>'+y+'</th>').join('')+'<th>Gesamt</th></tr></thead><tbody>'+overallRows+'</tbody></table>' +
-    '<h2>Overall Locations</h2><table><thead><tr><th>#</th><th>Location</th><th>Besuche</th></tr></thead><tbody>'+allLocRows+'</tbody></table></div>' +
+    '<div><h2>Gesamtübersicht</h2><table><thead><tr><th>#</th><th>Mitglied</th>'+years.map(y=>'<th>'+y+'</th>').join('')+'<th>Gesamt</th></tr></thead><tbody>'+overallRows+'</tbody></table></div>' +
     '<div><h2>Jahressieger</h2><div class="grid2">'+podiums+'</div></div>' +
+    '</div>' +
+    '<div class="grid2" style="margin-top:10px">' +
+    '<div><h2>📍 Locations pro Jahr</h2><div class="grid2">'+yearLocCardsPrint+'</div></div>' +
+    '<div><h2>🏆 Top 3 Locations — alle Jahre</h2><div class="card">'+top3LocsRowsPrint+'</div></div>' +
     '</div></div>';
 
   const html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
@@ -3247,7 +3420,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v6.1 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v6.8 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
