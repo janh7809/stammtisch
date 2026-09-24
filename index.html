@@ -1550,18 +1550,34 @@ function renderMemberLineChart(treffen, members) {
 }
 
 function renderExtraStats(treffen, members, stattgefunden) {
-  // 1. Längste aufeinanderfolgende Teilnahmen — sorted by streak desc
+  // 1. Längste aufeinanderfolgende Teilnahmen — sorted by streak desc, with date range
+  const ascTreffen = [...treffen].sort((a,b) => new Date(a.date) - new Date(b.date));
   const streaks = {};
+  const streakRanges = {};
   members.forEach(m => {
-    let max=0, cur=0;
-    treffen.forEach(t => {
+    let max=0, cur=0, curStart=null, bestStart=null, bestEnd=null;
+    ascTreffen.forEach(t => {
       const v = t.attendance[m] ?? 0;
-      if (v > 0) { cur++; max=Math.max(max,cur); } else { cur=0; }
+      if (v > 0) {
+        if (cur === 0) curStart = t.date;
+        cur++;
+        if (cur > max) { max = cur; bestStart = curStart; bestEnd = t.date; }
+      } else {
+        cur = 0; curStart = null;
+      }
     });
     streaks[m] = max;
+    streakRanges[m] = (bestStart && bestEnd) ? {start: bestStart, end: bestEnd} : null;
   });
   const sortedByStreak = [...members].sort((a,b) => streaks[b]-streaks[a]);
   const streakWinner = sortedByStreak[0];
+
+  function formatStreakRange(m) {
+    const r = streakRanges[m];
+    if (!r || streaks[m] === 0) return '';
+    const fmt = d => new Date(d).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    return r.start === r.end ? fmt(r.start) : `${fmt(r.start)} – ${fmt(r.end)}`;
+  }
 
   // 2. Meistbesuchte Location
   const locs = {};
@@ -1651,8 +1667,8 @@ function renderExtraStats(treffen, members, stattgefunden) {
       <div class="extra-card">
         <div class="ec-title">🔥 Längste Teilnahme-Serie</div>
         <div class="ec-winner">🏅 ${streakWinner}</div>
-        <div class="ec-sub">${streaks[streakWinner]} Stammtische in Folge</div>
-        <div style="margin-top:0.75rem">${sortedByStreak.map((m,i)=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0;border-bottom:1px solid var(--border)"><span style="font-size:0.75rem;color:var(--muted);min-width:16px">${i+1}.</span>${getAvatar(m,'sm')}<span style="flex:1;font-size:0.85rem">${m}</span><span style="color:var(--gold2);font-weight:500">${streaks[m]}×</span></div>`).join('')}</div>
+        <div class="ec-sub">${streaks[streakWinner]} Stammtische in Folge${formatStreakRange(streakWinner) ? ' · ' + formatStreakRange(streakWinner) : ''}</div>
+        <div style="margin-top:0.75rem">${sortedByStreak.map((m,i)=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid var(--border)"><span style="font-size:0.75rem;color:var(--muted);min-width:16px">${i+1}.</span>${getAvatar(m,'sm')}<div style="flex:1;min-width:0"><div style="font-size:0.85rem">${m}</div>${formatStreakRange(m) ? `<div style="font-size:0.7rem;color:var(--muted)">${formatStreakRange(m)}</div>` : ''}</div><span style="color:var(--gold2);font-weight:500;flex-shrink:0">${streaks[m]}×</span></div>`).join('')}</div>
       </div>
       <div class="extra-card">
         <div class="ec-title">📍 Meistbesuchte Location</div>
@@ -2066,28 +2082,40 @@ function renderOverall() {
 
   // Overall location stats — getAllTreffen ensures Supabase edits override historical ort
   const allLocs = {};
+  const yearLocsAll = {};
   years.forEach(y => {
+    const locsForYear = {};
     getAllTreffen(y).forEach(t => {
       if (!t.ort || t.ort === '-') return;
       t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(loc => {
         const l = loc.trim();
-        if (l) allLocs[l] = (allLocs[l]||0) + 1;
+        if (!l) return;
+        locsForYear[l] = (locsForYear[l]||0) + 1;
+        allLocs[l] = (allLocs[l]||0) + 1;
       });
     });
+    yearLocsAll[y] = Object.entries(locsForYear).sort((a,b)=>b[1]-a[1]);
   });
-  const sortedLocs = Object.entries(allLocs).sort((a,b)=>b[1]-a[1]);
-  const maxLocCount = sortedLocs[0]?.[1] || 1;
-  const locRows = sortedLocs.map(([loc, cnt], i) => `
-    <tr>
-      <td><span class="rank-badge rank-${i<3?i+1:'other'}" style="min-width:24px;width:24px;height:24px;font-size:0.75rem">${i+1}</span></td>
-      <td style="font-weight:500">${loc}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:0.75rem">
-          <div class="bar-bg" style="flex:1"><div class="bar-fill" style="width:${(cnt/maxLocCount*100).toFixed(0)}%"></div></div>
-          <span style="color:var(--gold2);font-weight:500;min-width:30px;text-align:right">${cnt}×</span>
-        </div>
-      </td>
-    </tr>`).join('');
+  const top3Locs = Object.entries(allLocs).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+  const yearLocCards = years.map(y => {
+    const rows = yearLocsAll[y].slice(0,8).map(([l,n],i) => `
+      <div class="podium-item">
+        <span class="rank-badge rank-${i<3?i+1:'other'}" style="min-width:24px;width:24px;height:24px;font-size:0.7rem">${i+1}</span>
+        ${getLocationAvatar(l,'sm')}
+        <span class="name">${l}</span>
+        <span class="pts">${n}×</span>
+      </div>`).join('');
+    return `<div class="year-card"><h3>📍 ${y}</h3>${rows || '<div style="color:var(--muted);font-size:0.85rem">Keine Daten</div>'}</div>`;
+  }).join('');
+
+  const top3LocsHtml = top3Locs.map(([l,n],i) => `
+    <div style="display:flex;align-items:center;gap:0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.65rem 0.9rem">
+      <span class="rank-badge rank-${i+1}" style="min-width:28px">${i+1}</span>
+      ${getLocationAvatar(l)}
+      <span style="flex:1;font-weight:600">${l}</span>
+      <span style="color:var(--gold);font-weight:700">${n}×</span>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:0.9rem">Keine Daten</div>';
 
   // Chart data: per-treffen attendance over time (all years combined)
   // Each point = one treffen, x=date, y=number of members present
@@ -2138,12 +2166,11 @@ function renderOverall() {
     <h2 class="section-title">Jahressieger</h2>
     <div class="overall-grid">${podiums}</div>
 
-    <h2 class="section-title">📍 Overall Locations (alle Jahre)</h2>
-    <div style="overflow-x:auto;margin-bottom:2rem">
-    <table class="ranking-table">
-      <thead><tr><th>#</th><th>Location</th><th>Besuche</th></tr></thead>
-      <tbody>${locRows}</tbody>
-    </table></div>
+    <h2 class="section-title">📍 Locations pro Jahr</h2>
+    <div class="overall-grid" style="margin-bottom:2rem">${yearLocCards}</div>
+
+    <h2 class="section-title">🏆 Top 3 Locations — alle Jahre</h2>
+    <div style="display:flex;flex-direction:column;gap:0.5rem;max-width:500px">${top3LocsHtml}</div>
   `;
 }
 
@@ -2750,9 +2777,10 @@ function printDashboard() {
   const sortedAll = [...members].sort((a,b)=>grandTotals[b]-grandTotals[a]);
 
   // Build HTML rows
+  const homeMembers = ["Christoph","Patrick","Fabian","André","Jan","Oliver","Klaas"];
   function av(name, type) {
     const d = type==='loc' ? locationAvatarData[name] : personAvatarData[name];
-    const defEmoji = type==='loc' ? (['Christoph','André','Fabian','Patrick','Jan','Klaas'].includes(name)?'🏠':'⚓') : '🧑';
+    const defEmoji = type==='loc' ? (homeMembers.includes(name)?'🏠':'⚓') : '🧑';
     return (d && d.emoji ? d.emoji : defEmoji) + ' ';
   }
 
@@ -2803,7 +2831,7 @@ function printDashboard() {
   const yearLocs={};
   getAllTreffen(year).forEach(t => {
     if(!t.ort||t.ort==='-') return;
-    t.ort.split(/\s*(?:und|,|&)\s*/i).forEach(l=>{l=l.trim();if(l)yearLocs[l]=(yearLocs[l]||0)+1;});
+    t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(l=>{l=l.trim();if(l)yearLocs[l]=(yearLocs[l]||0)+1;});
   });
   const locRows = Object.entries(yearLocs).sort((a,b)=>b[1]-a[1]).slice(0,8)
     .map(([l,n],i) => '<tr><td>'+(i+1)+'.</td><td>'+av(l,'loc')+l+'</td><td>'+n+'×</td></tr>').join('');
@@ -2812,7 +2840,7 @@ function printDashboard() {
   const guestCount={};
   getAllTreffen(year).forEach(t => {
     if(!t.guests||t.guests==='-') return;
-    t.guests.split(/,\s*/).forEach(g=>{g=g.trim();if(g)guestCount[g]=(guestCount[g]||0)+1;});
+    t.guests.split(/,\s*|\s+\bund\b\s+/i).forEach(g=>{g=g.trim();if(g)guestCount[g]=(guestCount[g]||0)+1;});
   });
   const guestRows = Object.entries(guestCount).sort((a,b)=>b[1]-a[1]).slice(0,10)
     .map(([g,n],i) => '<tr><td>'+(i+1)+'.</td><td>'+av(g,'person')+g+'</td><td>'+n+'×</td></tr>').join('');
@@ -2838,15 +2866,25 @@ function printDashboard() {
   const allLocs={};
   years.forEach(y=>getAllTreffen(y).forEach(t=>{
     if(!t.ort||t.ort==='-') return;
-    t.ort.split(/\s*(?:und|,|&)\s*/i).forEach(l=>{l=l.trim();if(l)allLocs[l]=(allLocs[l]||0)+1;});
+    t.ort.split(/\s*(?:\bund\b|,|&)\s*/i).forEach(l=>{l=l.trim();if(l)allLocs[l]=(allLocs[l]||0)+1;});
   }));
   const allLocRows = Object.entries(allLocs).sort((a,b)=>b[1]-a[1]).slice(0,12)
     .map(([l,n],i) => '<tr><td>'+(i+1)+'.</td><td>'+av(l,'loc')+l+'</td><td>'+n+'×</td></tr>').join('');
 
+  // Stammtische mit ALLEN Mitgliedern + Ø Teilnehmer/Treffen — gleiche Logik wie im Dashboard
+  const allPresentTreffen = ys.treffen.filter(t => members.every(m => (t.attendance[m]||0) > 0));
+  const totalPresentSum = ys.treffen.reduce((s,t) => s + members.filter(m=>(t.attendance[m]||0)>0).length, 0);
+  const avgPerTreffenPrint = ys.stattgefunden > 0 ? (totalPresentSum/ys.stattgefunden).toFixed(2) : '0';
+
   const statCards = [
     {l:'Mögliche',v:ys.maxP},{l:'Stattgefunden',v:ys.stattgefunden},
-    {l:'Ausgefallen',v:ys.ausgefallen},{l:'Mitglieder',v:members.length}
+    {l:'Ausgefallen',v:ys.ausgefallen},{l:'Mitglieder',v:members.length},
+    {l:'Ø Teiln./Treffen',v:avgPerTreffenPrint},{l:'Alle Mitgl. da',v:allPresentTreffen.length+'×'}
   ].map(s=>'<div class="card"><div class="lbl">'+s.l+'</div><div class="num">'+s.v+'</div></div>').join('');
+
+  const allPresentDatesStr = allPresentTreffen.length
+    ? allPresentTreffen.map(t => new Date(t.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})).join(', ')
+    : 'Noch keiner';
 
   const css = `*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'DM Sans',system-ui,sans-serif;font-size:10px;color:#1a2540;background:white}
@@ -2871,7 +2909,8 @@ td{padding:3px 5px;border-bottom:.5px solid #eef2f8}
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;border-bottom:2px solid #1a3f7a;padding-bottom:5px">' +
     '<div><h1>🍺 Stammtisch Statistik '+year+'</h1><div class="meta">Gedruckt '+new Date().toLocaleDateString('de-DE')+'</div></div>' +
     '<div class="meta" style="text-align:right">stammtisch-five.vercel.app</div></div>' +
-    '<div class="grid4">'+statCards+'</div>' +
+    '<div class="grid4" style="grid-template-columns:repeat(6,1fr)">'+statCards+'</div>' +
+    '<div class="card" style="margin-bottom:8px"><div class="lbl">📅 Daten mit allen Mitgliedern anwesend</div><div style="font-size:9.5px;margin-top:2px">'+allPresentDatesStr+'</div></div>' +
     '<div class="grid4" style="grid-template-columns:1.3fr 1fr 1fr 1fr">' +
     '<div><h2>Rangliste</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Teiln.</th><th>Quote</th></tr></thead><tbody>'+rankRows+'</tbody></table></div>' +
     '<div><h2>Locations</h2><table><thead><tr><th>#</th><th>Ort</th><th>Besuche</th></tr></thead><tbody>'+locRows+'</tbody></table>' +
@@ -3208,7 +3247,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v5.8 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v6.1 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
