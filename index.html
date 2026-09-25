@@ -1779,9 +1779,11 @@ function renderDashboard() {
   const lastDateLabel = lastDate
     ? `<div class="stat-sub">bis ${new Date(lastDate).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}</div>`
     : `<div class="stat-sub" style="color:var(--amber)">letzter Termin nicht festgelegt</div>`;
+  const verbleibend = maxP - verstrichen;
   statsGrid.innerHTML = `
     <div class="stat-card"><div class="stat-label">Mögliche Stammtische</div><div class="stat-value">${maxP}</div>${lastDateLabel}</div>
     <div class="stat-card"><div class="stat-label">Verstrichene Stammtische</div><div class="stat-value">${verstrichen}</div><div class="stat-sub">stattgef. + ausgef.</div></div>
+    <div class="stat-card"><div class="stat-label">Verbleibende Stammtische</div><div class="stat-value">${verbleibend}</div><div class="stat-sub">möglich − verstrichen</div></div>
     <div class="stat-card"><div class="stat-label">Stattgefunden</div><div class="stat-value">${stattgefunden}</div></div>
     <div class="stat-card"><div class="stat-label">Ausgefallen</div><div class="stat-value" style="color:var(--danger)">${ausgefallen}</div></div>
     <div class="stat-card"><div class="stat-label">Ø Teilnehmer/Treffen</div><div class="stat-value">${avgPerTreffen}</div><div class="stat-sub">exkl. ausgefallene</div></div>
@@ -3426,6 +3428,7 @@ function printDashboard() {
   const statCards = [
     {l:'Mögliche',v:ys.maxP + (ys.lastDate ? ' <span style="font-size:9px;color:#6a7a96;font-weight:400">bis '+new Date(ys.lastDate).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+'</span>' : '')},
     {l:'Verstrichen',v:ys.stattgefunden + ys.ausgefallen},
+    {l:'Verbleibend',v:ys.maxP - (ys.stattgefunden + ys.ausgefallen)},
     {l:'Stattgefunden',v:ys.stattgefunden},
     {l:'Ausgefallen',v:ys.ausgefallen},{l:'Mitglieder',v:members.length},
     {l:'Ø Teiln./Treffen',v:avgPerTreffenPrint},{l:'Alle Mitgl. da',v:allPresentTreffen.length+'×'}
@@ -3502,7 +3505,7 @@ td{padding:4px 6px;border-bottom:.5px solid #eef2f8}
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;border-bottom:2px solid #1a3f7a;padding-bottom:5px">' +
     '<div><h1>🍺 Stammtisch Statistik '+year+'</h1><div class="meta">Gedruckt '+new Date().toLocaleDateString('de-DE')+'</div></div>' +
     '<div class="meta" style="text-align:right">stammtisch-five.vercel.app</div></div>' +
-    '<div class="grid4" style="grid-template-columns:repeat(7,1fr)">'+statCards+'</div>' +
+    '<div class="grid4" style="grid-template-columns:repeat(8,1fr)">'+statCards+'</div>' +
     '<div class="card" style="margin-bottom:8px"><div class="lbl">📅 Daten mit allen Mitgliedern anwesend</div><div style="font-size:9.5px;margin-top:2px">'+allPresentDatesStr+'</div></div>' +
     '<div style="margin-bottom:8px"><h2>📈 Jahresverlauf — Teilnehmer pro Treffen</h2>'+chartSvg+'</div>' +
     '<div class="grid4" style="grid-template-columns:1.3fr 1fr 1fr 1fr">' +
@@ -3840,7 +3843,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v8.7 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v8.8 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
