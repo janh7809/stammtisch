@@ -847,40 +847,54 @@ function saveAvatars() {
 }
 
 // ============================================================
-// GAST → STAMMMITGLIED (memberSince)
+// GAST → STAMMMITGLIED (memberSince / memberUntil)
 // ============================================================
-// appData.memberSince: { name: "YYYY-MM-DD" } — nur für nachträglich beigetretene Mitglieder gesetzt.
-// Kein Eintrag = seit jeher Mitglied (die ursprünglichen 6 sowie alle historischen Jahres-Mitglieder).
+// memberSinceData: { name: "YYYY-01-01" } — Beitritt (immer zum Jahresanfang).
+// memberUntilData: { name: "YYYY-12-31" } — nur gesetzt, falls später zurückgestuft;
+// die Person bleibt für alle Jahre bis einschließlich "until" als Mitglied erfasst,
+// verschwindet aber NIE aus der Mitgliedschafts-Historie (wichtig für die Overall-Seite).
 let memberSinceData = JSON.parse(localStorage.getItem('st_member_since') || '{}');
+let memberUntilData = JSON.parse(localStorage.getItem('st_member_until') || '{}');
 
 function saveMemberSince() {
   localStorage.setItem('st_member_since', JSON.stringify(memberSinceData));
   sbSetMeta('member_since', memberSinceData);
 }
-
-// War `name` an `dateStr` (YYYY-MM-DD) bereits offizielles Mitglied?
-function isActiveMember(name, dateStr) {
-  const since = memberSinceData[name];
-  return !since || dateStr >= since;
+function saveMemberUntil() {
+  localStorage.setItem('st_member_until', JSON.stringify(memberUntilData));
+  sbSetMeta('member_until', memberUntilData);
 }
 
-// Alle jemals bekannten Mitglieder (historisch + aktuell) — für Übersichten über alle Jahre.
+// War `name` an `dateStr` (YYYY-MM-DD) offizielles Mitglied?
+function isActiveMember(name, dateStr) {
+  const since = memberSinceData[name];
+  const until = memberUntilData[name];
+  if (since && dateStr < since) return false;
+  if (until && dateStr > until) return false;
+  return true;
+}
+
+// Alle jemals bekannten Mitglieder (historisch + aktuell + jemals befördert/zurückgestuft)
+// — für die Overall-Seite: einmal Mitglied, für immer in der Gesamtübersicht sichtbar.
 function getAllKnownMembers() {
   const set = new Set(appData.members);
   Object.values(historicalData).forEach(h => { if (h.members) h.members.forEach(m => set.add(m)); });
+  Object.keys(memberSinceData).forEach(m => set.add(m));
   return Array.from(set);
 }
 
-// Effektive Mitgliederliste für ein Jahr: historische Liste (falls vorhanden) plus
-// aktuelle Mitglieder, deren "Mitglied seit"-Datum in dieses Jahr oder früher fällt.
+// Effektive Mitgliederliste für ein Jahr: historische Liste (falls vorhanden), alle
+// "seit jeher"-Mitglieder, plus jeder mit memberSinceData, dessen Zeitraum dieses Jahr überschneidet.
 function getEffectiveMembers(year) {
   const hist = historicalData[year];
   const base = hist ? [...hist.members] : [];
-  const yearEnd = `${year}-12-31`;
-  appData.members.forEach(m => {
+  const yearStart = `${year}-01-01`, yearEnd = `${year}-12-31`;
+  const alwaysMembers = appData.members.filter(m => !memberSinceData[m]);
+  alwaysMembers.forEach(m => { if (!base.includes(m)) base.push(m); });
+  Object.keys(memberSinceData).forEach(m => {
     if (base.includes(m)) return;
-    const since = memberSinceData[m];
-    if (!since || since <= yearEnd) base.push(m);
+    const since = memberSinceData[m], until = memberUntilData[m];
+    if (since <= yearEnd && (!until || until >= yearStart)) base.push(m);
   });
   return base.length ? base : [...appData.members];
 }
@@ -928,6 +942,17 @@ function openMemberSinceEdit(memberName) {
   document.getElementById('memberSinceModal').classList.add('open');
 }
 
+function openDemoteToGuest(memberName) {
+  if (!isAdmin) return;
+  promoteTarget = memberName;
+  promoteMode = 'demote';
+  document.getElementById('memberSinceModalTitle').textContent = '↩ Zu Gast zurückstufen';
+  document.getElementById('memberSinceModalText').textContent =
+    `${memberName} bleibt Mitglied bis einschließlich des gewählten Jahres und ist ab dem 1. Januar des Folgejahres wieder Gast (Wechsel erfolgt immer zum Jahreswechsel). Die bisherige Mitgliedschaft bleibt in der Overall-Statistik dauerhaft sichtbar.`;
+  fillMemberSinceYearOptions(new Date().getFullYear());
+  document.getElementById('memberSinceModal').classList.add('open');
+}
+
 function confirmMemberSince() {
   if (!promoteTarget) return;
   const dateVal = document.getElementById('memberSinceDateInput').value; // immer "YYYY-01-01"
@@ -937,15 +962,26 @@ function confirmMemberSince() {
   if (promoteMode === 'new') {
     if (!appData.members.includes(promoteTarget)) appData.members.push(promoteTarget);
     memberSinceData[promoteTarget] = dateVal;
+    delete memberUntilData[promoteTarget]; // falls zuvor zurückgestuft: reaktivieren
     saveMemberSince();
+    saveMemberUntil();
     const guests = getGuests().filter(g => g !== promoteTarget);
     saveGuestsDB(guests);
     saveData();
     showMsg(`⭐ ${promoteTarget} ist ab ${yearLabel} Stammmitglied!`, true);
-  } else {
+  } else if (promoteMode === 'edit') {
     memberSinceData[promoteTarget] = dateVal;
     saveMemberSince();
     showMsg(`Beitrittsjahr von ${promoteTarget} auf ${yearLabel} aktualisiert.`, true);
+  } else if (promoteMode === 'demote') {
+    const untilYear = parseInt(yearLabel);
+    memberUntilData[promoteTarget] = `${untilYear}-12-31`;
+    saveMemberUntil();
+    appData.members = appData.members.filter(m => m !== promoteTarget);
+    const guests = getGuests();
+    if (!guests.includes(promoteTarget)) { guests.push(promoteTarget); saveGuestsDB(guests); }
+    saveData();
+    showMsg(`${promoteTarget} ist Mitglied bis Ende ${untilYear}, ab ${untilYear+1} wieder Gast.`, true);
   }
 
   document.getElementById('memberSinceModal').classList.remove('open');
@@ -956,21 +992,6 @@ function confirmMemberSince() {
   renderDashboard();
 }
 
-function demoteMemberToGuest(name) {
-  if (!isAdmin) return;
-  if (!confirm(`${name} wieder als Gast führen statt als Stammmitglied? Bisherige Teilnahmen bleiben erhalten, zählen aber nicht mehr in aktuelle Statistiken.`)) return;
-  appData.members = appData.members.filter(m => m !== name);
-  delete memberSinceData[name];
-  saveMemberSince();
-  const guests = getGuests();
-  if (!guests.includes(name)) { guests.push(name); saveGuestsDB(guests); }
-  saveData();
-  renderMemberList();
-  renderManageLists();
-  renderAttendanceGrid();
-  renderDashboard();
-  showMsg(`${name} ist wieder Gast.`, true);
-}
 
 // People (members + guests) — emoji only, no images (Datenschutz)
 function getAvatar(name, size='') {
@@ -1019,6 +1040,8 @@ async function loadFromSupabase() {
     if (locationAvatars) { locationAvatarData = locationAvatars; localStorage.setItem('st_location_avatars', JSON.stringify(locationAvatars)); }
     const memberSince = await sbMeta('member_since');
     if (memberSince) { memberSinceData = memberSince; localStorage.setItem('st_member_since', JSON.stringify(memberSince)); }
+    const memberUntil = await sbMeta('member_until');
+    if (memberUntil) { memberUntilData = memberUntil; localStorage.setItem('st_member_until', JSON.stringify(memberUntil)); }
     const lastStammtisch = await sbMeta('last_stammtisch');
     if (lastStammtisch) {
       lastStammtischData = lastStammtisch;
@@ -1744,6 +1767,7 @@ function renderDashboard() {
   if (dsc) dsc.innerHTML = `<ul class="statut-list">${appData.statuten.map((s,i)=>`<li><span class="statut-num">${i+1}</span><span>${s}</span></li>`).join('')}</ul>`;
 
   const {totals, members, maxP, personalMaxP, lastDate, treffen, stattgefunden, ausgefallen} = getYearStats(currentDashYear);
+  const verstrichen = stattgefunden + ausgefallen;
 
   const statsGrid = document.getElementById('statsGrid');
   // Ø Teilnehmer/Treffen: echte Anwesenheiten (1 oder 0.5 = 1 Person), nur stattgefundene Treffen
@@ -1754,14 +1778,15 @@ function renderDashboard() {
     : `<div class="stat-sub" style="color:var(--amber)">letzter Termin nicht festgelegt</div>`;
   statsGrid.innerHTML = `
     <div class="stat-card"><div class="stat-label">Mögliche Stammtische</div><div class="stat-value">${maxP}</div>${lastDateLabel}</div>
+    <div class="stat-card"><div class="stat-label">Verstrichene Stammtische</div><div class="stat-value">${verstrichen}</div><div class="stat-sub">stattgef. + ausgef.</div></div>
     <div class="stat-card"><div class="stat-label">Stattgefunden</div><div class="stat-value">${stattgefunden}</div></div>
     <div class="stat-card"><div class="stat-label">Ausgefallen</div><div class="stat-value" style="color:var(--danger)">${ausgefallen}</div></div>
     <div class="stat-card"><div class="stat-label">Ø Teilnehmer/Treffen</div><div class="stat-value">${avgPerTreffen}</div><div class="stat-sub">exkl. ausgefallene</div></div>
     <div class="stat-card"><div class="stat-label">Mitglieder</div><div class="stat-value">${members.length}</div></div>
   `;
 
-  // Quote bezieht sich auf den persönlichen Nenner (ab Beitrittsdatum bei nachträglich
-  // beigetretenen Mitgliedern), nicht auf die volle Jahres-Möglichkeit.
+  // Quote bezieht sich auf die VERSTRICHENEN Stammtische (persönlicher Nenner ab
+  // Beitrittsjahr), nicht auf die volle mögliche Jahresanzahl.
   const ranked = members.map(m => {
     const pMax = personalMaxP[m] || maxP;
     return {name:m, pts:totals[m]||0, pct: pMax > 0 ? (totals[m]||0)/pMax : 0};
@@ -2058,7 +2083,10 @@ function renderExtraStats(treffen, members, stattgefunden) {
   ).join('') || '<div class="all-attend-item">Noch keiner</div>';
 
   const guestHtml = allGuests.length > 0
-    ? allGuests.map(([g,n],i)=>`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;font-size:0.9rem"><span class="rank-badge rank-${i<3?i+1:'other'}" style="min-width:24px;width:24px;height:24px;font-size:0.75rem">${i+1}</span>${getAvatar(g,'sm')}<span style="flex:1">${g}</span><span style="color:var(--gold2);font-weight:500">${n}×</span></div>`).join('')
+    ? allGuests.map(([g,n],i)=>{
+        const gPct = treffen.length > 0 ? (n/treffen.length*100).toFixed(0) : 0;
+        return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;font-size:0.9rem"><span class="rank-badge rank-${i<3?i+1:'other'}" style="min-width:24px;width:24px;height:24px;font-size:0.75rem">${i+1}</span>${getAvatar(g,'sm')}<span style="flex:1">${g}</span><span style="color:var(--gold2);font-weight:500">${n}× <span style="color:var(--muted);font-weight:400;font-size:0.8em">(${gPct}%)</span></span></div>`;
+      }).join('')
     : '<span style="color:var(--muted)">Noch keine Daten</span>';
 
   const yearChartHtml = buildYearChart(currentDashYear, treffen, members);
@@ -2404,6 +2432,19 @@ function renderOverall() {
   const sortedMembers = [...members].sort((a,b) => grandTotals[b] - grandTotals[a]);
 
   // Big comparison table — yearStats already computed above using getYearStats()
+  // Zeigt "seit YYYY" oder "Mitglied YYYY–YYYY (jetzt Gast)" für beförderte/zurückgestufte Mitglieder
+  function membershipNote(m) {
+    const since = memberSinceData[m];
+    if (!since) return '';
+    const sinceYear = new Date(since).getFullYear();
+    const until = memberUntilData[m];
+    if (until) {
+      const untilYear = new Date(until).getFullYear();
+      return `<span style="font-size:0.7rem;color:var(--muted);font-weight:400;display:block">Mitglied ${sinceYear}–${untilYear} (jetzt Gast)</span>`;
+    }
+    return `<span style="font-size:0.7rem;color:var(--gold);font-weight:400;display:block">seit ${sinceYear}</span>`;
+  }
+
   const tableRows = sortedMembers.map((m, rank) => {
     const cells = years.map(y => {
       const ys = yearStats[y];
@@ -2417,7 +2458,7 @@ function renderOverall() {
       ? `<span class="rank-badge rank-${rank+1}" style="margin-right:0.5rem">${rank+1}</span>`
       : `<span class="rank-badge rank-other" style="margin-right:0.5rem">${rank+1}</span>`;
     return `<tr>
-      <td style="font-weight:600;color:var(--text);white-space:nowrap">${rankBadge}${m}</td>
+      <td style="font-weight:600;color:var(--text);white-space:nowrap">${rankBadge}${m}${membershipNote(m)}</td>
       ${cells}
       <td style="font-weight:700;color:var(--gold2);white-space:nowrap">${total} <span style="color:var(--muted);font-size:0.8rem">Teiln.</span></td>
     </tr>`;
@@ -2786,7 +2827,7 @@ function renderMemberList() {
           ? `<div style="font-size:0.72rem;color:var(--gold);cursor:pointer" onclick="openMemberSinceEdit('${m}')">⭐ Mitglied seit ${sinceLabel} ✏</div>`
           : ''}
       </div>
-      ${sinceLabel ? `<button class="att-btn" style="font-size:0.72rem;padding:0.25rem 0.5rem;color:var(--muted)" onclick="demoteMemberToGuest('${m}')" title="Zurück zu Gast">↩ Gast</button>` : ''}
+      ${sinceLabel ? `<button class="att-btn" style="font-size:0.72rem;padding:0.25rem 0.5rem;color:var(--muted)" onclick="openDemoteToGuest('${m}')" title="Zurück zu Gast">↩ Gast</button>` : ''}
       <button class="btn-danger" style="padding:0.3rem 0.5rem;font-size:0.8rem" onclick="removeMember(${i})">×</button>
     </div>`;
   }).join('');
@@ -3708,7 +3749,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v8.1 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v8.2 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
