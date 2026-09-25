@@ -2480,7 +2480,8 @@ function renderOverall() {
     const ranked = Object.entries(ys.totals).sort((a,b)=>b[1]-a[1]);
     const hist = historicalData[y];
     const items = ranked.slice(0,3).map(([name,pts],i) => {
-      const pct = ys.maxP > 0 ? (pts/ys.maxP*100).toFixed(0) : 0;
+      const pMax = ys.personalMaxP[name] || ys.maxP;
+      const pct = pMax > 0 ? (pts/pMax*100).toFixed(0) : 0;
       return `
       <div class="podium-item">
         <span class="rank-badge rank-${i+1}" style="min-width:28px">${i+1}</span>
@@ -2567,11 +2568,10 @@ function renderOverall() {
           ? `<span class="rank-badge rank-${rank+1}" style="width:28px;height:28px;font-size:0.8rem;flex-shrink:0">${rank+1}</span>`
           : `<span class="rank-badge rank-other" style="width:28px;height:28px;font-size:0.8rem;flex-shrink:0">${rank+1}</span>`;
         const yearCells = years.map(y => {
-          const hist = historicalData[y];
           const ys = yearStats[y];
           const pts = ys ? (ys.totals[m]||0) : 0;
-          const maxP = ys ? ys.maxP : 50;
-          const pct = (pts/maxP*100).toFixed(0);
+          const pMax = ys ? (ys.personalMaxP[m] || ys.maxP) : 50;
+          const pct = pMax > 0 ? (pts/pMax*100).toFixed(0) : '–';
           return `<div style="text-align:center;min-width:48px">
             <div style="font-size:0.75rem;color:var(--muted)">${y}</div>
             <div style="font-weight:600;font-size:0.88rem">${pts}</div>
@@ -3384,7 +3384,8 @@ function printDashboard() {
     const top3 = Object.entries(ys2.totals).sort((a,b)=>b[1]-a[1]).slice(0,3);
     return '<div class="card"><h3>🏆 '+y+'</h3>'+
       top3.map(([name,pts],i)=>{
-        const pct = ys2.maxP > 0 ? (pts/ys2.maxP*100).toFixed(0) : 0;
+        const pMax = ys2.personalMaxP[name] || ys2.maxP;
+        const pct = pMax > 0 ? (pts/pMax*100).toFixed(0) : 0;
         return '<div class="srow"><span>'+['🥇','🥈','🥉'][i]+' '+av(name,'person')+name+'</span><b>'+pts+' <span style="color:#6a7a96;font-weight:400">('+pct+'%)</span></b></div>';
       }).join('')+
       '</div>';
@@ -3839,7 +3840,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v8.6 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v8.7 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
