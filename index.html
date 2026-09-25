@@ -3331,9 +3331,20 @@ function printDashboard() {
     }).join('');
 
   // Overall table
+  function membershipNotePrint(m) {
+    const since = memberSinceData[m];
+    if (!since) return '';
+    const sinceYear = new Date(since).getFullYear();
+    const until = memberUntilData[m];
+    if (until) {
+      const untilYear = new Date(until).getFullYear();
+      return ' <span style="font-size:8px;color:#6a7a96;font-weight:400">(Mitgl. '+sinceYear+'–'+untilYear+', jetzt Gast)</span>';
+    }
+    return ' <span style="font-size:8px;color:#e07020;font-weight:400">(seit '+sinceYear+')</span>';
+  }
   const overallRows = sortedAll.map((m,rank) => {
     const pts = years.map(y=>yearStats2[y].totals[m]||0);
-    return '<tr><td style="font-weight:600">'+(rank+1)+'.</td><td>'+av(m,'person')+m+'</td>'+
+    return '<tr><td style="font-weight:600">'+(rank+1)+'.</td><td>'+av(m,'person')+m+membershipNotePrint(m)+'</td>'+
       pts.map(p=>'<td style="font-weight:700;color:#1a3f7a">'+p+'</td>').join('')+
       '<td style="font-weight:700">'+grandTotals[m]+'</td></tr>';
   }).join('');
@@ -3383,7 +3394,9 @@ function printDashboard() {
   const avgPerTreffenPrint = ys.stattgefunden > 0 ? (totalPresentSum/ys.stattgefunden).toFixed(2) : '0';
 
   const statCards = [
-    {l:'Mögliche',v:ys.maxP},{l:'Stattgefunden',v:ys.stattgefunden},
+    {l:'Mögliche',v:ys.maxP + (ys.lastDate ? ' <span style="font-size:9px;color:#6a7a96;font-weight:400">bis '+new Date(ys.lastDate).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+'</span>' : '')},
+    {l:'Verstrichen',v:ys.stattgefunden + ys.ausgefallen},
+    {l:'Stattgefunden',v:ys.stattgefunden},
     {l:'Ausgefallen',v:ys.ausgefallen},{l:'Mitglieder',v:members.length},
     {l:'Ø Teiln./Treffen',v:avgPerTreffenPrint},{l:'Alle Mitgl. da',v:allPresentTreffen.length+'×'}
   ].map(s=>'<div class="card"><div class="lbl">'+s.l+'</div><div class="num">'+s.v+'</div></div>').join('');
@@ -3459,7 +3472,7 @@ td{padding:4px 6px;border-bottom:.5px solid #eef2f8}
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;border-bottom:2px solid #1a3f7a;padding-bottom:5px">' +
     '<div><h1>🍺 Stammtisch Statistik '+year+'</h1><div class="meta">Gedruckt '+new Date().toLocaleDateString('de-DE')+'</div></div>' +
     '<div class="meta" style="text-align:right">stammtisch-five.vercel.app</div></div>' +
-    '<div class="grid4" style="grid-template-columns:repeat(6,1fr)">'+statCards+'</div>' +
+    '<div class="grid4" style="grid-template-columns:repeat(7,1fr)">'+statCards+'</div>' +
     '<div class="card" style="margin-bottom:8px"><div class="lbl">📅 Daten mit allen Mitgliedern anwesend</div><div style="font-size:9.5px;margin-top:2px">'+allPresentDatesStr+'</div></div>' +
     '<div style="margin-bottom:8px"><h2>📈 Jahresverlauf — Teilnehmer pro Treffen</h2>'+chartSvg+'</div>' +
     '<div class="grid4" style="grid-template-columns:1.3fr 1fr 1fr 1fr">' +
@@ -3754,7 +3767,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v8.3 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v8.4 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
