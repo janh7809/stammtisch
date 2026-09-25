@@ -458,6 +458,22 @@
   </div>
 </div>
 
+<!-- MEMBER SINCE MODAL -->
+<div class="modal-backdrop" id="memberSinceModal">
+  <div class="modal" style="max-width:400px">
+    <h2 id="memberSinceModalTitle">⭐ Zu Stammmitglied machen</h2>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1rem" id="memberSinceModalText"></p>
+    <div class="form-row">
+      <label>Mitglied seit (Jahresanfang)</label>
+      <select id="memberSinceDateInput"></select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="confirmMemberSince()">Bestätigen</button>
+      <button class="btn-ghost" onclick="document.getElementById('memberSinceModal').classList.remove('open')">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT TREFFEN MODAL -->
 <div class="modal-backdrop" id="editTreffenModal" style="align-items:flex-start;padding:1rem;overflow-y:auto">
   <div class="modal" style="max-width:560px;width:100%;margin:auto">
@@ -606,7 +622,7 @@
       <h3>Neues Treffen eintragen</h3>
       <div class="form-row">
         <label>Datum</label>
-        <input type="date" id="newDate">
+        <input type="date" id="newDate" onchange="renderAttendanceGrid()">
       </div>
       <div class="form-row">
         <label>Ort</label>
@@ -702,6 +718,21 @@
         <select id="printYear"></select>
       </div>
       <button class="btn-primary" onclick="printDashboard()" style="width:100%">🖨 Drucken</button>
+    </div>
+
+    <div class="admin-card">
+      <h3>📅 Letzten Stammtisch des Jahres festlegen</h3>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Bestimmt „Mögliche Stammtische": alle Donnerstage vom 1. Januar bis zu diesem Datum. Üblicherweise der Donnerstag vor der Weihnachtsfeier.</p>
+      <div class="form-row">
+        <label>Jahr</label>
+        <select id="lastStammtischYear" onchange="loadLastStammtischForYear()"></select>
+      </div>
+      <div class="form-row">
+        <label>Letzter Stammtisch</label>
+        <input type="date" id="lastStammtischDateInput">
+      </div>
+      <button class="btn-primary" onclick="saveLastStammtischForYear()" style="width:100%">Speichern</button>
+      <div id="lastStammtischResult" style="margin-top:0.75rem;font-size:0.85rem;color:var(--muted)"></div>
     </div>
 
     <div class="admin-card">
@@ -859,6 +890,88 @@ function activeMembersForDate(members, dateStr) {
   return members.filter(m => isActiveMember(m, dateStr));
 }
 
+// ============================================================
+// GAST → STAMMMITGLIED: Admin-UI-Funktionen
+// ============================================================
+let promoteTarget = null;
+let promoteMode = 'new'; // 'new' = Gast wird befördert, 'edit' = Datum eines bestehenden Mitglieds ändern
+
+function fillMemberSinceYearOptions(preselectYear) {
+  const sel = document.getElementById('memberSinceDateInput');
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let y = currentYear + 1; y >= currentYear - 5; y--) years.push(y);
+  sel.innerHTML = years.map(y => `<option value="${y}-01-01">${y}</option>`).join('');
+  if (preselectYear) sel.value = `${preselectYear}-01-01`;
+}
+
+function openPromoteToMember(guestName) {
+  if (!isAdmin) return;
+  promoteTarget = guestName;
+  promoteMode = 'new';
+  document.getElementById('memberSinceModalTitle').textContent = '⭐ Zu Stammmitglied machen';
+  document.getElementById('memberSinceModalText').textContent =
+    `${guestName} wird ab dem 1. Januar des gewählten Jahres als offizielles Stammtisch-Mitglied geführt (Aufnahme erfolgt immer zum Jahresanfang). Für Treffen davor bleibt ${guestName} als Gast erfasst.`;
+  fillMemberSinceYearOptions(new Date().getFullYear());
+  document.getElementById('memberSinceModal').classList.add('open');
+}
+
+function openMemberSinceEdit(memberName) {
+  if (!isAdmin) return;
+  promoteTarget = memberName;
+  promoteMode = 'edit';
+  document.getElementById('memberSinceModalTitle').textContent = '⭐ Beitrittsjahr ändern';
+  document.getElementById('memberSinceModalText').textContent =
+    `Ändert das Jahr, ab dessen 1. Januar ${memberName} als Mitglied zählt. Das wirkt sich auf die persönliche Quote (Rangliste) aus.`;
+  const existingYear = memberSinceData[memberName] ? new Date(memberSinceData[memberName]).getFullYear() : new Date().getFullYear();
+  fillMemberSinceYearOptions(existingYear);
+  document.getElementById('memberSinceModal').classList.add('open');
+}
+
+function confirmMemberSince() {
+  if (!promoteTarget) return;
+  const dateVal = document.getElementById('memberSinceDateInput').value; // immer "YYYY-01-01"
+  if (!dateVal) { showMsg('Bitte Jahr wählen.', false); return; }
+  const yearLabel = dateVal.slice(0,4);
+
+  if (promoteMode === 'new') {
+    if (!appData.members.includes(promoteTarget)) appData.members.push(promoteTarget);
+    memberSinceData[promoteTarget] = dateVal;
+    saveMemberSince();
+    const guests = getGuests().filter(g => g !== promoteTarget);
+    saveGuestsDB(guests);
+    saveData();
+    showMsg(`⭐ ${promoteTarget} ist ab ${yearLabel} Stammmitglied!`, true);
+  } else {
+    memberSinceData[promoteTarget] = dateVal;
+    saveMemberSince();
+    showMsg(`Beitrittsjahr von ${promoteTarget} auf ${yearLabel} aktualisiert.`, true);
+  }
+
+  document.getElementById('memberSinceModal').classList.remove('open');
+  promoteTarget = null;
+  renderMemberList();
+  renderManageLists();
+  renderAttendanceGrid();
+  renderDashboard();
+}
+
+function demoteMemberToGuest(name) {
+  if (!isAdmin) return;
+  if (!confirm(`${name} wieder als Gast führen statt als Stammmitglied? Bisherige Teilnahmen bleiben erhalten, zählen aber nicht mehr in aktuelle Statistiken.`)) return;
+  appData.members = appData.members.filter(m => m !== name);
+  delete memberSinceData[name];
+  saveMemberSince();
+  const guests = getGuests();
+  if (!guests.includes(name)) { guests.push(name); saveGuestsDB(guests); }
+  saveData();
+  renderMemberList();
+  renderManageLists();
+  renderAttendanceGrid();
+  renderDashboard();
+  showMsg(`${name} ist wieder Gast.`, true);
+}
+
 // People (members + guests) — emoji only, no images (Datenschutz)
 function getAvatar(name, size='') {
   const a = personAvatarData[name];
@@ -904,6 +1017,16 @@ async function loadFromSupabase() {
     if (personAvatars) { personAvatarData = personAvatars; localStorage.setItem('st_person_avatars', JSON.stringify(personAvatars)); }
     const locationAvatars = await sbMeta('location_avatars');
     if (locationAvatars) { locationAvatarData = locationAvatars; localStorage.setItem('st_location_avatars', JSON.stringify(locationAvatars)); }
+    const memberSince = await sbMeta('member_since');
+    if (memberSince) { memberSinceData = memberSince; localStorage.setItem('st_member_since', JSON.stringify(memberSince)); }
+    const lastStammtisch = await sbMeta('last_stammtisch');
+    if (lastStammtisch) {
+      lastStammtischData = lastStammtisch;
+      localStorage.setItem('st_last_stammtisch', JSON.stringify(lastStammtisch));
+    } else {
+      // Noch nichts in der Datenbank — die vorbefüllten Standardwerte einmalig sichern
+      saveLastStammtisch();
+    }
     // Datenschutz: keine Bilder erlaubt — bereits gespeicherte Fotos entfernen und nur Emoji behalten
     let imgStripped = false;
     Object.keys(personAvatarData).forEach(k => { if (personAvatarData[k] && personAvatarData[k].img) { delete personAvatarData[k].img; imgStripped = true; } });
@@ -1401,6 +1524,50 @@ function countThursdaysInYear(year) {
   return count;
 }
 
+// ============================================================
+// LETZTER STAMMTISCH DES JAHRES → "mögliche Stammtische"
+// ============================================================
+// lastStammtischData: { "2025": "2025-12-18" } — der Donnerstag vor der
+// Weihnachtsfeier, wird zu Jahresbeginn festgelegt und im Adminbereich gepflegt.
+let lastStammtischData = JSON.parse(localStorage.getItem('st_last_stammtisch') || '{}');
+// Vorbefüllt mit den bekannten letzten Stammtischen — kann im Adminbereich angepasst werden
+if (Object.keys(lastStammtischData).length === 0) {
+  lastStammtischData = {2023:"2023-12-14", 2024:"2024-12-19", 2025:"2025-12-18", 2026:"2026-12-17"};
+}
+
+function saveLastStammtisch() {
+  localStorage.setItem('st_last_stammtisch', JSON.stringify(lastStammtischData));
+  sbSetMeta('last_stammtisch', lastStammtischData);
+}
+
+// Zählt die Donnerstage vom 1. Januar bis einschließlich dem angegebenen Datum.
+function countThursdaysUpTo(year, endDateStr) {
+  let count = 0;
+  const d = new Date(year, 0, 1);
+  while (d.getDay() !== 4) d.setDate(d.getDate() + 1);
+  const endDate = new Date(endDateStr);
+  while (d.getFullYear() === year && d <= endDate) {
+    count++;
+    d.setDate(d.getDate() + 7);
+  }
+  return count;
+}
+
+// Ermittelt "mögliche Stammtische" für ein Jahr: bevorzugt das im Adminbereich
+// gesetzte Datum des letzten Stammtischs, sonst historische Werte, sonst alle
+// Donnerstage des Jahres als Fallback.
+function getMaxPossible(year) {
+  const custom = lastStammtischData[year];
+  if (custom) return countThursdaysUpTo(year, custom);
+  const hist = historicalData[year];
+  if (hist) return hist.maxPossible;
+  return countThursdaysInYear(year);
+}
+
+function getLastStammtischDate(year) {
+  return lastStammtischData[year] || null;
+}
+
 function getAllTreffen(year) {
   const hist = historicalData[year];
   const custom = appData.treffen.filter(t => new Date(t.date).getFullYear() === year);
@@ -1417,21 +1584,27 @@ function getYearStats(year) {
   const hist = historicalData[year];
   // getAllTreffen already deduplicates: Supabase overrides historical for same date
   const treffen = getAllTreffen(year);
-  const members = hist ? hist.members : appData.members;
-  const maxP = hist ? hist.maxPossible : countThursdaysInYear(year);
+  const members = getEffectiveMembers(year);
+  const maxP = getMaxPossible(year);
+  const lastDate = getLastStammtischDate(year);
 
-  // Always recompute totals from the deduplicated treffen list
-  // This ensures edited treffen don't get double-counted
+  // Totals + persönlicher Nenner: nur Treffen ab dem jeweiligen Beitrittsdatum zählen
+  // (ein nachträglich beigetretenes Mitglied wird für Wochen davor weder belohnt noch bestraft)
   const totals = {};
-  members.forEach(m => totals[m] = 0);
+  const personalMaxP = {};
+  members.forEach(m => { totals[m] = 0; personalMaxP[m] = 0; });
   treffen.forEach(t => {
-    members.forEach(m => { totals[m] = (totals[m]||0) + (t.attendance[m]||0); });
+    members.forEach(m => {
+      if (!isActiveMember(m, t.date)) return; // war an diesem Tag noch kein Mitglied
+      totals[m] += (t.attendance[m]||0);
+      personalMaxP[m]++;
+    });
   });
 
   const ausgefallen = treffen.filter(t => t.ort === '-' || !t.ort || Object.values(t.attendance).every(v=>v===0)).length;
   const stattgefunden = treffen.length - ausgefallen;
 
-  return { totals, members, maxP, treffen, stattgefunden, ausgefallen };
+  return { totals, members, maxP, personalMaxP, lastDate, treffen, stattgefunden, ausgefallen };
 }
 
 // ============================================================
@@ -1570,22 +1743,29 @@ function renderDashboard() {
   const dsc = document.getElementById('dashStatutenContent');
   if (dsc) dsc.innerHTML = `<ul class="statut-list">${appData.statuten.map((s,i)=>`<li><span class="statut-num">${i+1}</span><span>${s}</span></li>`).join('')}</ul>`;
 
-  const {totals, members, maxP, treffen, stattgefunden, ausgefallen} = getYearStats(currentDashYear);
+  const {totals, members, maxP, personalMaxP, lastDate, treffen, stattgefunden, ausgefallen} = getYearStats(currentDashYear);
 
   const statsGrid = document.getElementById('statsGrid');
   // Ø Teilnehmer/Treffen: echte Anwesenheiten (1 oder 0.5 = 1 Person), nur stattgefundene Treffen
   const totalPresent = treffen.reduce((sum, t) => sum + members.filter(m => (t.attendance[m]||0) > 0).length, 0);
   const avgPerTreffen = stattgefunden > 0 ? (totalPresent / stattgefunden).toFixed(2) : 0;
+  const lastDateLabel = lastDate
+    ? `<div class="stat-sub">bis ${new Date(lastDate).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}</div>`
+    : `<div class="stat-sub" style="color:var(--amber)">letzter Termin nicht festgelegt</div>`;
   statsGrid.innerHTML = `
-    <div class="stat-card"><div class="stat-label">Mögliche Stammtische</div><div class="stat-value">${maxP}</div></div>
+    <div class="stat-card"><div class="stat-label">Mögliche Stammtische</div><div class="stat-value">${maxP}</div>${lastDateLabel}</div>
     <div class="stat-card"><div class="stat-label">Stattgefunden</div><div class="stat-value">${stattgefunden}</div></div>
     <div class="stat-card"><div class="stat-label">Ausgefallen</div><div class="stat-value" style="color:var(--danger)">${ausgefallen}</div></div>
     <div class="stat-card"><div class="stat-label">Ø Teilnehmer/Treffen</div><div class="stat-value">${avgPerTreffen}</div><div class="stat-sub">exkl. ausgefallene</div></div>
     <div class="stat-card"><div class="stat-label">Mitglieder</div><div class="stat-value">${members.length}</div></div>
   `;
 
-  const ranked = members.map(m => ({name:m, pts:totals[m]||0, pct:(totals[m]||0)/maxP}))
-    .sort((a,b)=>b.pts-a.pts);
+  // Quote bezieht sich auf den persönlichen Nenner (ab Beitrittsdatum bei nachträglich
+  // beigetretenen Mitgliedern), nicht auf die volle Jahres-Möglichkeit.
+  const ranked = members.map(m => {
+    const pMax = personalMaxP[m] || maxP;
+    return {name:m, pts:totals[m]||0, pct: pMax > 0 ? (totals[m]||0)/pMax : 0};
+  }).sort((a,b)=>b.pts-a.pts);
   const maxPts = ranked[0]?.pts || 1; // first place = 100% bar width
 
   const table = document.getElementById('rankingTable');
@@ -2211,7 +2391,7 @@ function buildYearChart(year, treffen, members) {
 
 function renderOverall() {
   const years = getAllYears();
-  const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
+  const members = getAllKnownMembers();
 
   // Compute totals per member across all years
   // Use getYearStats which includes both historical + custom Supabase treffen
@@ -2227,9 +2407,9 @@ function renderOverall() {
   const tableRows = sortedMembers.map((m, rank) => {
     const cells = years.map(y => {
       const ys = yearStats[y];
-      const maxP = ys ? ys.maxP : 50;
+      const pMax = (ys && ys.personalMaxP[m]) || (ys ? ys.maxP : 50);
       const pts = ys ? (ys.totals[m]||0) : 0;
-      const pct = (pts/maxP*100).toFixed(0);
+      const pct = pMax > 0 ? (pts/pMax*100).toFixed(0) : '–';
       return `<td style="white-space:nowrap">${pts}<span style="color:var(--muted);font-size:0.75rem"> ${pct}%</span></td>`;
     }).join('');
     const total = grandTotals[m];
@@ -2387,6 +2567,44 @@ function renderAdmin() {
     const years = getAllYears().slice().sort((a,b) => b-a); // neuestes zuerst
     printYearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
   }
+  const lastStYearSel = document.getElementById('lastStammtischYear');
+  if (lastStYearSel) {
+    const years = getAllYears().slice().sort((a,b) => b-a);
+    // auch das kommende Jahr anbieten, damit man es vorab planen kann
+    const nextYear = Math.max(...years) + 1;
+    const allYearsPlus = [nextYear, ...years];
+    lastStYearSel.innerHTML = allYearsPlus.map(y => `<option value="${y}">${y}</option>`).join('');
+    loadLastStammtischForYear();
+  }
+}
+
+function loadLastStammtischForYear() {
+  const yearSel = document.getElementById('lastStammtischYear');
+  const input = document.getElementById('lastStammtischDateInput');
+  const result = document.getElementById('lastStammtischResult');
+  if (!yearSel || !input) return;
+  const year = parseInt(yearSel.value);
+  const existing = getLastStammtischDate(year);
+  input.value = existing || `${year}-12-18`;
+  const maxP = getMaxPossible(year);
+  result.textContent = existing
+    ? `Aktuell: ${maxP} mögliche Stammtische bis ${new Date(existing).toLocaleDateString('de-DE')}.`
+    : `Noch nicht festgelegt — aktuell wird mit ${maxP} (alle Donnerstage im Jahr) gerechnet.`;
+}
+
+function saveLastStammtischForYear() {
+  const year = parseInt(document.getElementById('lastStammtischYear').value);
+  const dateVal = document.getElementById('lastStammtischDateInput').value;
+  if (!dateVal) { showMsg('Bitte Datum wählen.', false); return; }
+  const d = new Date(dateVal);
+  if (d.getDay() !== 4) {
+    if (!confirm('Das gewählte Datum ist kein Donnerstag. Trotzdem speichern?')) return;
+  }
+  lastStammtischData[year] = dateVal;
+  saveLastStammtisch();
+  loadLastStammtischForYear();
+  renderDashboard();
+  showMsg(`Letzter Stammtisch ${year} gespeichert: ${new Date(dateVal).toLocaleDateString('de-DE')} (${getMaxPossible(year)} mögliche Termine).`, true);
 }
 
 function memberAttRow(m, prefix) {
@@ -2415,8 +2633,11 @@ function memberAttRow(m, prefix) {
 function renderAttendanceGrid() {
   const grid = document.getElementById('attendanceGrid');
   if (!grid) return;
-  grid.innerHTML = appData.members.map(m => memberAttRow(m, 'att-')).join('');
-  appData.members.forEach(m => setAttX('att-', m, 0));
+  const dateInput = document.getElementById('newDate');
+  const chosenDate = dateInput ? dateInput.value : '';
+  const relevantMembers = chosenDate ? activeMembersForDate(appData.members, chosenDate) : appData.members;
+  grid.innerHTML = relevantMembers.map(m => memberAttRow(m, 'att-')).join('');
+  relevantMembers.forEach(m => setAttX('att-', m, 0));
 }
 
 const tempAtt = {};
@@ -2510,9 +2731,10 @@ function saveTreffen() {
   const excuse = document.getElementById('newExcuse').value;
   const note = document.getElementById('newBemerkung').value;
   if (!date) { showMsg('Bitte Datum eingeben.', false); return; }
-  appData.members.forEach(m => { if (tempAtt[m] === undefined) tempAtt[m] = 0; });
+  const relevantMembers = activeMembersForDate(appData.members, date);
+  relevantMembers.forEach(m => { if (tempAtt[m] === undefined) tempAtt[m] = 0; });
   // Validate: every absent member must have a reason selected
-  const missingReason = appData.members.filter(m => (tempAtt[m]||0) === 0 && !tempReasons[m]);
+  const missingReason = relevantMembers.filter(m => (tempAtt[m]||0) === 0 && !tempReasons[m]);
   if (missingReason.length > 0) {
     showMsg(`Bitte Abwesenheitsgrund wählen für: ${missingReason.join(', ')}`, false);
     // Highlight missing
@@ -2550,15 +2772,24 @@ function showMsg(msg, ok) {
 function renderMemberList() {
   const el = document.getElementById('memberList');
   if (!el) return;
-  el.innerHTML = appData.members.map((m,i) => `
-    <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+  el.innerHTML = appData.members.map((m,i) => {
+    const since = memberSinceData[m];
+    const sinceLabel = since ? new Date(since).getFullYear() : null;
+    return `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
       <div onclick="openAvatarEdit('${m}')" style="cursor:pointer;position:relative;flex-shrink:0" title="Avatar ändern">
         ${getAvatar(m)}
         <span style="position:absolute;bottom:-2px;right:-2px;font-size:0.6rem;background:var(--gold2);color:white;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;line-height:1">✏</span>
       </div>
-      <span style="flex:1;font-weight:500">${m}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500">${escapeHtml(m)}</div>
+        ${sinceLabel
+          ? `<div style="font-size:0.72rem;color:var(--gold);cursor:pointer" onclick="openMemberSinceEdit('${m}')">⭐ Mitglied seit ${sinceLabel} ✏</div>`
+          : ''}
+      </div>
+      ${sinceLabel ? `<button class="att-btn" style="font-size:0.72rem;padding:0.25rem 0.5rem;color:var(--muted)" onclick="demoteMemberToGuest('${m}')" title="Zurück zu Gast">↩ Gast</button>` : ''}
       <button class="btn-danger" style="padding:0.3rem 0.5rem;font-size:0.8rem" onclick="removeMember(${i})">×</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function addMember() {
@@ -2840,7 +3071,7 @@ function exportToExcel() {
   }
 
   const years = getAllYears();
-  const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
+  const members = getAllKnownMembers();
   const wb = XLSX.utils.book_new();
 
   // ── Header style helper ──────────────────────────────────────────────────
@@ -2852,7 +3083,7 @@ function exportToExcel() {
   years.forEach(year => {
     const hist = historicalData[year];
     const treffen = getAllTreffen(year).sort((a,b) => new Date(a.date)-new Date(b.date));
-    const mems = hist ? hist.members : members;
+    const mems = getEffectiveMembers(year);
 
     const header = ['Datum','Wochentag','Ort','Gäste',
       ...mems.map(m => `${m}`), 'Anwesend gesamt',
@@ -2898,7 +3129,8 @@ function exportToExcel() {
     const pts = years.map(y => getYearStats(y).totals[m]||0);
     const pcts = years.map(y => {
       const ys = getYearStats(y);
-      return ys ? Math.round((ys.totals[m]||0)/ys.maxP*100)+'%' : '-';
+      const pMax = (ys && ys.personalMaxP[m]) || (ys ? ys.maxP : 0);
+      return pMax > 0 ? Math.round((ys.totals[m]||0)/pMax*100)+'%' : '-';
     });
     overallRows.push([m, ...pts, ...pcts, pts.reduce((a,b)=>a+b,0)]);
   });
@@ -2984,14 +3216,18 @@ function printDashboard() {
   // Collect all data
   const ys = getYearStats(year);
   const years = getAllYears();
-  const members = ["Christoph","Patrick","Fabian","André","Jan","Oliver"];
-  const ranked = members.map(m => ({name:m, pts:ys.totals[m]||0, pct:(ys.totals[m]||0)/ys.maxP})).sort((a,b)=>b.pts-a.pts);
+  const members = ys.members; // effektive Mitgliederliste für DIESES Jahr (inkl. beförderter Gäste)
+  const allMembers = getAllKnownMembers(); // für die Overall-Sektion über alle Jahre
+  const ranked = members.map(m => {
+    const pMax = ys.personalMaxP[m] || ys.maxP;
+    return {name:m, pts:ys.totals[m]||0, pct: pMax > 0 ? (ys.totals[m]||0)/pMax : 0};
+  }).sort((a,b)=>b.pts-a.pts);
   const maxPts = ranked[0]?.pts||1;
   const yearStats2 = {};
   years.forEach(y => { yearStats2[y] = getYearStats(y); });
   const grandTotals = {};
-  members.forEach(m => { grandTotals[m] = years.reduce((s,y)=>s+(yearStats2[y].totals[m]||0),0); });
-  const sortedAll = [...members].sort((a,b)=>grandTotals[b]-grandTotals[a]);
+  allMembers.forEach(m => { grandTotals[m] = years.reduce((s,y)=>s+(yearStats2[y].totals[m]||0),0); });
+  const sortedAll = [...allMembers].sort((a,b)=>grandTotals[b]-grandTotals[a]);
 
   // Build HTML rows
   const homeMembers = ["Christoph","Patrick","Fabian","André","Jan","Oliver","Klaas"];
@@ -3258,6 +3494,8 @@ function renderManageList(type) {
       </span>
       <span style="flex:1">${escapeHtml(item)}</span>
       <div style="display:flex;gap:0.3rem">
+        ${type==='guest' ? `<button class="att-btn" style="font-size:0.75rem;padding:0.2rem 0.5rem;color:var(--gold2);border-color:rgba(154,111,30,0.35)"
+          onclick="openPromoteToMember('${item.replace(/'/g,"\\'")}')" title="Zu Stammmitglied machen">⭐</button>` : ''}
         <button class="att-btn" style="font-size:0.75rem;padding:0.2rem 0.5rem;color:var(--gold);border-color:rgba(42,95,168,0.3)"
           onclick="openRenamePanel('${type}','${item.replace(/'/g,"\\'")}')">✏</button>
         <button class="att-btn" style="font-size:0.75rem;padding:0.2rem 0.5rem;color:var(--danger);border-color:rgba(201,99,99,0.3)"
@@ -3470,7 +3708,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v7.9 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v8.1 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
