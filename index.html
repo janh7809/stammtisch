@@ -1749,7 +1749,8 @@ function computePlausibility(year) {
     }
   }
 
-  return { ok: issues.length === 0, issues, entered, expected: ys.maxP };
+  const realIssueCount = issues.filter(i => !i.startsWith('ℹ️')).length;
+  return { ok: realIssueCount === 0, issues, entered, expected: ys.maxP };
 }
 
 // ============================================================
@@ -3322,8 +3323,12 @@ function printDashboard() {
     if(!t.guests||t.guests==='-') return;
     t.guests.split(/,\s*|\s+\bund\b\s+/i).forEach(g=>{g=g.trim();if(g)guestCount[g]=(guestCount[g]||0)+1;});
   });
+  const verstrichenPrint = ys.stattgefunden + ys.ausgefallen;
   const guestRows = Object.entries(guestCount).sort((a,b)=>b[1]-a[1]).slice(0,10)
-    .map(([g,n],i) => '<tr><td>'+(i+1)+'.</td><td>'+av(g,'person')+g+'</td><td>'+n+'×</td></tr>').join('');
+    .map(([g,n],i) => {
+      const gp = verstrichenPrint > 0 ? (n/verstrichenPrint*100).toFixed(0) : 0;
+      return '<tr><td>'+(i+1)+'.</td><td>'+av(g,'person')+g+'</td><td>'+n+'× <span style="color:#6a7a96;font-weight:400">('+gp+'%)</span></td></tr>';
+    }).join('');
 
   // Overall table
   const overallRows = sortedAll.map((m,rank) => {
@@ -3435,7 +3440,7 @@ function printDashboard() {
 body{font-family:'DM Sans',system-ui,sans-serif;font-size:12px;color:#1a2540;background:white}
 @page{size:A3 landscape;margin:0.8cm}
 @media screen{body{padding:20px}.pagebreak{margin-bottom:30px;border-bottom:2px dashed #ccc;padding-bottom:20px}}
-@media print{.pagebreak{page-break-after:always}.page{page-break-inside:avoid}}
+@media print{.pagebreak{page-break-after:always}}
 h1{font-family:Georgia,serif;font-size:26px;color:#1a3f7a;margin-bottom:4px}
 h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1a3f7a;border-bottom:2px solid #c8d4e8;padding-bottom:4px;margin:10px 0 6px}
 h3{font-size:12px;font-weight:600;color:#1a3f7a;margin-bottom:5px}
@@ -3749,7 +3754,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v8.2 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v8.3 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
