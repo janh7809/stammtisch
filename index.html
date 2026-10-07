@@ -234,6 +234,14 @@
   }
   .statut-list li:last-child { border-bottom: none; }
   .statut-num { color: var(--gold); font-weight: 700; min-width: 24px; }
+  .statut-text { white-space: pre-line; flex: 1; min-width: 0; }
+  .statut-move-btn {
+    padding: 0.15rem 0.45rem; font-size: 0.75rem; line-height: 1;
+    border-radius: 6px; border: 1px solid var(--border); background: none;
+    color: var(--muted); cursor: pointer;
+  }
+  .statut-move-btn:hover:not(:disabled) { color: var(--gold); border-color: var(--gold); }
+  .statut-move-btn:disabled { opacity: 0.3; cursor: default; }
 
   /* ADMIN */
   .admin-section { max-width: 760px; width: 100%; margin: 0 auto; }
@@ -741,14 +749,15 @@
       <h3>🔍 Datenintegrität prüfen</h3>
       <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Prüft alle vier Jahre auf einmal: fehlende/doppelte Termine, unklare Abwesenheitsgründe und Konflikte zwischen Code- und Datenbank-Version.</p>
       <button class="btn-primary" onclick="runFullIntegrityCheck()" style="width:100%">🔍 Alle Jahre prüfen</button>
+      <button class="btn-ghost" onclick="cleanupDuplicateTreffen()" style="width:100%;margin-top:0.5rem">🧹 Doppelte Termine bereinigen</button>
       <div id="integrityCheckResult" style="margin-top:1rem"></div>
     </div>
 
     <div class="admin-card">
       <h3>Statuten bearbeiten</h3>
       <div id="statutenAdmin"></div>
-      <div style="display:flex;gap:0.75rem;margin-top:1rem">
-        <input type="text" id="newStatut" placeholder="Neue Statut hinzufügen..." style="flex:1">
+      <div style="display:flex;gap:0.75rem;margin-top:1rem;align-items:flex-start">
+        <textarea id="newStatut" placeholder="Neue Statut hinzufügen... (Enter = neue Zeile)" style="flex:1;min-height:70px"></textarea>
         <button class="btn-primary" onclick="addStatut()" style="padding:0.65rem 1.25rem">+</button>
       </div>
     </div>
@@ -1057,7 +1066,12 @@ async function loadFromSupabase() {
     Object.keys(personAvatarData).forEach(k => { if (personAvatarData[k] && personAvatarData[k].img) { delete personAvatarData[k].img; imgStripped = true; } });
     Object.keys(locationAvatarData).forEach(k => { if (locationAvatarData[k] && locationAvatarData[k].img) { delete locationAvatarData[k].img; imgStripped = true; } });
     if (imgStripped) saveAvatars();
+    const gRen = await sbMeta('guest_renames');
+    if (gRen) guestRenameData = Object.assign({}, DEFAULT_GUEST_RENAMES, gRen);
+    const lRen = await sbMeta('location_renames');
+    if (lRen) locationRenameData = lRen;
   } catch(e) { console.error('Supabase load error:', e); }
+  await applyRenames(isAdmin); // Namen vereinheitlichen; als Admin auch dauerhaft in der Datenbank
   showLoadingBanner(false);
   renderDashboard();
   renderStatuten();
@@ -1267,7 +1281,7 @@ const historicalData = {
       {date:"2026-02-26",ort:"Anker",guests:"Timo, Alexander",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:0,Oliver:0},excuse:"Oliver: Nachschicht · Patrick: Skifahren · Jan: zu fertig",note:""},
       {date:"2026-03-05",ort:"Anker",guests:"Timo",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Nachtschicht",note:""},
       {date:"2026-03-12",ort:"Anker",guests:"Timo, Dominik",attendance:{Christoph:1,Patrick:0,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Patrick: Skifahren · Oliver: Frühschicht",note:""},
-      {date:"2026-03-19",ort:"Anker",guests:"Timo, Giuseppe, Tobi Kaiser",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:""},
+      {date:"2026-03-19",ort:"Anker",guests:"Timo, Giuseppe, Tobias",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:1},excuse:"",note:""},
       {date:"2026-03-26",ort:"Anker",guests:"Timo, Alexander",attendance:{Christoph:1,Patrick:0,Fabian:0,André:1,Jan:1,Oliver:0},excuse:"Patrick: keine Begründung · Oliver: Frühschicht · Fabian: Hamburg",note:""},
       {date:"2026-04-02",ort:"André",guests:"Timo, Alexander, Dominik",attendance:{Christoph:1,Patrick:0.5,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Schwabenpark, platt",note:"Patrick kam nach 21:30 Uhr"},
       {date:"2026-04-09",ort:"Anker",guests:"Timo",attendance:{Christoph:1,Patrick:1,Fabian:1,André:1,Jan:1,Oliver:0},excuse:"Oliver: Frühschicht",note:""},
@@ -1747,7 +1761,7 @@ function computePlausibility(year) {
       .map(t => t.date);
     const overridden = dbDates.filter(d => hist.treffen.some(ht => ht.date === d));
     if (overridden.length > 0) {
-      issues.push(`ℹ️ ${overridden.length} Termin(e) existieren sowohl im Code als auch in der Datenbank — die Datenbank-Version wird angezeigt: ${overridden.join(', ')}.`);
+      issues.push(`ℹ️ ${overridden.length} Termin(e) sind doppelt gespeichert (Code + Datenbank, die Datenbank-Version wird angezeigt): ${overridden.join(', ')}. Mit „🧹 Doppelte Termine bereinigen" aufräumen.`);
     }
   }
 
@@ -1767,7 +1781,7 @@ function renderDashboard() {
 
   // Statuten in dashboard
   const dsc = document.getElementById('dashStatutenContent');
-  if (dsc) dsc.innerHTML = `<ul class="statut-list">${appData.statuten.map((s,i)=>`<li><span class="statut-num">${i+1}</span><span>${s}</span></li>`).join('')}</ul>`;
+  if (dsc) dsc.innerHTML = `<ul class="statut-list">${appData.statuten.map((s,i)=>`<li><span class="statut-num">${i+1}</span><span class="statut-text">${escapeHtml(s)}</span></li>`).join('')}</ul>`;
 
   const {totals, members, maxP, personalMaxP, lastDate, treffen, stattgefunden, ausgefallen} = getYearStats(currentDashYear);
   const verstrichen = stattgefunden + ausgefallen;
@@ -2617,7 +2631,7 @@ function renderStatuten() {
     <div class="statuten-card">
       <h3>Gültige Statuten des Stammtischs</h3>
       <ul class="statut-list">
-        ${statuten.map((s,i)=>`<li><span class="statut-num">${i+1}</span><span>${s}</span></li>`).join('')}
+        ${statuten.map((s,i)=>`<li><span class="statut-num">${i+1}</span><span class="statut-text">${escapeHtml(s)}</span></li>`).join('')}
       </ul>
     </div>
   `;
@@ -2882,11 +2896,16 @@ function removeMember(i) {
 function renderStatutenAdmin() {
   const el = document.getElementById('statutenAdmin');
   if (!el) return;
+  const lastIdx = appData.statuten.length - 1;
   el.innerHTML = appData.statuten.map((s,i) => `
     <div style="padding:0.6rem 0;border-bottom:1px solid var(--border)" id="statut-row-${i}">
       <div style="display:flex;gap:0.75rem;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;gap:0.2rem;flex-shrink:0">
+          <button class="statut-move-btn" onclick="moveStatut(${i},-1)" title="Nach oben" ${i===0?'disabled':''}>▲</button>
+          <button class="statut-move-btn" onclick="moveStatut(${i},1)" title="Nach unten" ${i===lastIdx?'disabled':''}>▼</button>
+        </div>
         <span style="color:var(--gold);font-weight:700;min-width:20px;padding-top:0.1rem">${i+1}</span>
-        <span style="flex:1;font-size:0.9rem" id="statut-text-${i}">${s}</span>
+        <span class="statut-text" style="font-size:0.9rem" id="statut-text-${i}">${escapeHtml(s)}</span>
         <div style="display:flex;gap:0.3rem;flex-shrink:0">
           <button class="att-btn" style="color:var(--gold);border-color:rgba(201,168,76,0.3);font-size:0.75rem;padding:0.2rem 0.5rem"
             onclick="editStatut(${i})">✏</button>
@@ -2894,7 +2913,7 @@ function renderStatutenAdmin() {
         </div>
       </div>
       <div id="statut-edit-${i}" style="display:none;margin-top:0.5rem;margin-left:28px">
-        <textarea id="statut-input-${i}" style="width:100%;min-height:80px;font-size:0.88rem;margin-bottom:0.4rem">${s}</textarea>
+        <textarea id="statut-input-${i}" style="width:100%;min-height:80px;font-size:0.88rem;margin-bottom:0.4rem">${escapeHtml(s)}</textarea>
         <div style="display:flex;gap:0.5rem">
           <button class="btn-primary" style="padding:0.4rem 1rem;font-size:0.85rem" onclick="saveStatut(${i})">Speichern</button>
           <button class="btn-ghost" style="padding:0.4rem 0.75rem;font-size:0.85rem" onclick="cancelStatutEdit(${i})">Abbrechen</button>
@@ -2918,6 +2937,7 @@ function saveStatut(i) {
   saveData();
   renderStatutenAdmin();
   renderStatuten();
+  renderDashboard();
 }
 
 function cancelStatutEdit(i) {
@@ -2933,12 +2953,24 @@ function addStatut() {
   if (!s) return;
   appData.statuten.push(s);
   saveData(); inp.value = '';
-  renderStatutenAdmin(); renderStatuten();
+  renderStatutenAdmin(); renderStatuten(); renderDashboard();
 }
 
 function removeStatut(i) {
   appData.statuten.splice(i,1);
-  saveData(); renderStatutenAdmin(); renderStatuten();
+  saveData(); renderStatutenAdmin(); renderStatuten(); renderDashboard();
+}
+
+// Statut um eine Position nach oben (dir=-1) oder unten (dir=1) verschieben
+function moveStatut(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= appData.statuten.length) return;
+  const list = appData.statuten;
+  [list[i], list[j]] = [list[j], list[i]];
+  saveData();
+  renderStatutenAdmin();
+  renderStatuten();
+  renderDashboard();
 }
 
 // ============================================================
@@ -2999,6 +3031,69 @@ function getLocations() { return JSON.parse(localStorage.getItem('st_locations')
 function getGuests()    { return JSON.parse(localStorage.getItem('st_guests')    || 'null') || [...defaultGuests]; }
 function saveLocations(arr) { localStorage.setItem('st_locations', JSON.stringify(arr)); sbSetMeta('locations', arr); }
 function saveGuestsDB(arr)  { localStorage.setItem('st_guests',    JSON.stringify(arr)); sbSetMeta('guests', arr); }
+
+// ============================================================
+// UMBENENNUNGEN (Gäste & Locations) — dauerhaft und rückwirkend
+// ============================================================
+// Gespeichert als Zuordnung alt → neu in den Metadaten. Wird bei jedem Laden auf
+// historische Daten UND Datenbank-Treffen angewendet, damit ein Name nie wieder
+// in zwei Schreibweisen auftaucht (z. B. "Tobi Kaiser" und "Tobias").
+const DEFAULT_GUEST_RENAMES = { 'Tobi Kaiser': 'Tobias', 'Tobias Kaiser': 'Tobias' };
+let guestRenameData = Object.assign({}, DEFAULT_GUEST_RENAMES);
+let locationRenameData = {};
+
+function resolveRename(map, name) {
+  let n = name, guard = 0;
+  while (map[n] && map[n] !== n && guard++ < 20) n = map[n];
+  return n;
+}
+function uniq(arr) { return arr.filter((x, i) => x && arr.indexOf(x) === i); }
+
+function renameNameList(str, map) {
+  if (!str || str === '-') return str;
+  const parts = str.split(/,\s*|\s+\bund\b\s+/i).map(s => s.trim()).filter(Boolean);
+  const renamed = parts.map(s => resolveRename(map, s));
+  const result = uniq(renamed);
+  // Nichts umbenannt und keine Dubletten → Originaltext unverändert lassen
+  if (result.length === parts.length && renamed.every((s, i) => s === parts[i])) return str;
+  return result.join(', ');
+}
+
+// Wendet alle Umbenennungen an. persist=true schreibt geänderte Datenbank-Treffen,
+// die Gäste-/Locationliste und Avatare zurück (nur als Admin sinnvoll).
+async function applyRenames(persist) {
+  Object.values(historicalData).forEach(yr => yr.treffen.forEach(t => {
+    t.guests = renameNameList(t.guests, guestRenameData);
+    t.ort = renameNameList(t.ort, locationRenameData);
+  }));
+  const changedRows = [];
+  appData.treffen.forEach(t => {
+    const g = renameNameList(t.guests, guestRenameData);
+    const o = renameNameList(t.ort, locationRenameData);
+    if (g !== t.guests || o !== t.ort) { t.guests = g; t.ort = o; changedRows.push(t); }
+  });
+  const guests = getGuests(), newGuests = uniq(guests.map(g => resolveRename(guestRenameData, g)));
+  const locs = getLocations(), newLocs = uniq(locs.map(l => resolveRename(locationRenameData, l)));
+  let avatarsChanged = false;
+  [[personAvatarData, guestRenameData], [locationAvatarData, locationRenameData]].forEach(([store, map]) => {
+    Object.keys(map).forEach(oldN => {
+      const newN = resolveRename(map, oldN);
+      if (store[oldN] && newN !== oldN) { if (!store[newN]) store[newN] = store[oldN]; delete store[oldN]; avatarsChanged = true; }
+    });
+  });
+  const guestsChanged = JSON.stringify(newGuests) !== JSON.stringify(guests);
+  const locsChanged = JSON.stringify(newLocs) !== JSON.stringify(locs);
+  if (persist) {
+    if (guestsChanged) saveGuestsDB(newGuests);
+    if (locsChanged) saveLocations(newLocs);
+    if (avatarsChanged) saveAvatars();
+    for (const t of changedRows) { try { await saveTreffenToSupabase(t); } catch(e) { console.error(e); } }
+  } else {
+    if (guestsChanged) localStorage.setItem('st_guests', JSON.stringify(newGuests));
+    if (locsChanged) localStorage.setItem('st_locations', JSON.stringify(newLocs));
+  }
+  return changedRows.length;
+}
 
 // Track guest tags for new + edit forms
 let newGuestTags = [];
@@ -3282,6 +3377,56 @@ function runFullIntegrityCheck() {
     ${sections}`;
 }
 
+// ============================================================
+// DOPPELTE TERMINE (Code + Datenbank) BEREINIGEN
+// ============================================================
+function normalizeTreffenForCompare(t) {
+  const clean = v => { const s = (v === undefined || v === null) ? '' : String(v).trim(); return s === '-' ? '' : s; };
+  const att = {};
+  Object.keys(t.attendance || {}).forEach(k => { const v = Number(t.attendance[k]) || 0; if (v) att[k] = v; });
+  return JSON.stringify({
+    ort: clean(t.ort), guests: clean(renameNameList(t.guests, guestRenameData)),
+    att: Object.keys(att).sort().map(k => [k, att[k]]),
+    excuse: clean(t.excuse).replace(/\s+/g, ' '), note: clean(t.note).replace(/\s+/g, ' ')
+  });
+}
+
+function findDuplicateTreffen() {
+  const identical = [], different = [];
+  appData.treffen.forEach(dbT => {
+    const hist = historicalData[new Date(dbT.date).getFullYear()];
+    const codeT = hist && hist.treffen.find(h => h.date === dbT.date);
+    if (!codeT) return;
+    (normalizeTreffenForCompare(dbT) === normalizeTreffenForCompare(codeT) ? identical : different).push(dbT);
+  });
+  return { identical, different };
+}
+
+async function cleanupDuplicateTreffen() {
+  if (!isAdmin) return;
+  const { identical, different } = findDuplicateTreffen();
+  if (!identical.length && !different.length) { showMsg('✅ Keine doppelten Termine vorhanden.', true); return; }
+  if (!confirm(`${identical.length} doppelte Termine sind inhaltlich gleich und werden aus der Datenbank gelöscht (die Code-Version bleibt).\n` +
+    `${different.length} Termine wurden im Adminbereich geändert — diese bleiben erhalten und werden als Datei zur Übernahme in den Code heruntergeladen.\n\nFortfahren?`)) return;
+
+  let removed = 0;
+  for (const t of identical) {
+    try { await deleteTreffenFromSupabase(t.date); appData.treffen = appData.treffen.filter(x => x.date !== t.date); removed++; }
+    catch(e) { console.error(e); }
+  }
+  if (different.length) {
+    const data = different.map(t => ({ date: t.date, ort: t.ort, guests: t.guests, attendance: t.attendance, excuse: t.excuse, note: t.note }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'stammtisch_geaenderte_termine.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  renderDashboard(); renderTreffen(); runFullIntegrityCheck();
+  showMsg(`🧹 ${removed} doppelte Termine entfernt` + (different.length ? ` · ${different.length} geänderte Termine als Datei heruntergeladen` : ''), true);
+}
+
 function printDashboard() {
   const year = parseInt(document.getElementById('printYear').value);
   setDashYear(year);
@@ -3485,9 +3630,7 @@ function printDashboard() {
 
   const css = `*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'DM Sans',system-ui,sans-serif;font-size:12px;color:#1a2540;background:white}
-@page{size:A3 landscape;margin:0.8cm}
-@media screen{body{padding:20px}.pagebreak{margin-bottom:30px;border-bottom:2px dashed #ccc;padding-bottom:20px}}
-@media print{.pagebreak{page-break-after:always}}
+.print-page{width:1587px;padding:28px 32px;background:#fff}
 h1{font-family:Georgia,serif;font-size:26px;color:#1a3f7a;margin-bottom:4px}
 h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1a3f7a;border-bottom:2px solid #c8d4e8;padding-bottom:4px;margin:10px 0 6px}
 h3{font-size:12px;font-weight:600;color:#1a3f7a;margin-bottom:5px}
@@ -3502,7 +3645,7 @@ th{background:#eef2f8;color:#1a3f7a;padding:4px 6px;text-align:left;font-size:10
 td{padding:4px 6px;border-bottom:.5px solid #eef2f8}
 .meta{font-size:9.5px;color:#6a7a96}`;
 
-  const p1 = '<div class="page pagebreak">' +
+  const p1 = '<div class="print-page">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;border-bottom:2px solid #1a3f7a;padding-bottom:5px">' +
     '<div><h1>🍺 Stammtisch Statistik '+year+'</h1><div class="meta">Gedruckt '+new Date().toLocaleDateString('de-DE')+'</div></div>' +
     '<div class="meta" style="text-align:right">stammtisch-five.vercel.app</div></div>' +
@@ -3535,7 +3678,7 @@ td{padding:4px 6px;border-bottom:.5px solid #eef2f8}
       '</div>';
   }).join('');
 
-  const p2 = '<div class="page">' +
+  const p2 = '<div class="print-page">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;border-bottom:2px solid #1a3f7a;padding-bottom:5px">' +
     '<div><h1>🍺 Stammtisch Overall Statistik</h1><div class="meta">Alle Jahre · Gedruckt '+new Date().toLocaleDateString('de-DE')+'</div></div></div>' +
     '<div class="grid2">' +
@@ -3548,24 +3691,25 @@ td{padding:4px 6px;border-bottom:.5px solid #eef2f8}
     '<div><h2>🏆 Top 3 Locations — alle Jahre</h2><div class="card">'+top3LocsRowsPrint+'</div></div>' +
     '</div></div>';
 
-  // ── Direkte PDF-Erzeugung: jede Seite wird einzeln als Bild gerendert und
-  // in ein exakt zweiseitiges A3-PDF gepackt. Keine Browser-Druckpaginierung
-  // mehr nötig — dadurch kann nie eine dritte, überschüssige Seite entstehen.
+  // ── Direkte PDF-Erzeugung: beide Seiten werden in einem eigenen, unsichtbaren
+  // iframe aufgebaut (keine Kollision mit App-CSS), einzeln als Bild gerendert
+  // und in ein exakt zweiseitiges A3-Querformat-PDF gepackt.
   showMsg('📄 PDF wird erstellt, einen Moment...', true);
 
-  const container = document.createElement('div');
-  container.style.cssText = 'position:fixed;top:0;left:-99999px;width:1587px;background:#fff;z-index:-1';
-  const styleTag = '<style>' + css.replace(/@page[^}]*\}/g,'').replace(/@media screen[^]*?\}\}/,'') + '</style>';
-  container.innerHTML = styleTag + p1 + p2;
-  document.body.appendChild(container);
-
-  const pageEls = container.querySelectorAll('.page');
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.cssText = 'position:fixed;left:0;top:0;width:1587px;height:1123px;border:0;opacity:0;pointer-events:none;z-index:-1';
+  document.body.appendChild(iframe);
+  const idoc = iframe.contentDocument;
+  idoc.open();
+  idoc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body>' + p1 + p2 + '</body></html>');
+  idoc.close();
+  const cleanup = () => { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); };
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
-      if (document.querySelector('script[src="'+src+'"]')) return resolve();
       const s = document.createElement('script');
-      s.src = src; s.onload = resolve; s.onerror = reject;
+      s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('Bibliothek konnte nicht geladen werden'));
       document.head.appendChild(s);
     });
   }
@@ -3573,24 +3717,32 @@ td{padding:4px 6px;border-bottom:.5px solid #eef2f8}
   Promise.all([
     typeof html2canvas === 'undefined' ? loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js') : Promise.resolve(),
     typeof window.jspdf === 'undefined' ? loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js') : Promise.resolve(),
-  ]).then(() => new Promise(res => setTimeout(res, 200))) // kurz warten, bis Layout/Fonts stehen
+  ]).then(() => (idoc.fonts && idoc.fonts.ready) ? idoc.fonts.ready : null)
+    .then(() => new Promise(res => setTimeout(res, 150)))
     .then(async () => {
+      const pageEls = idoc.querySelectorAll('.print-page');
+      if (pageEls.length !== 2) throw new Error('Unerwartete Seitenzahl: ' + pageEls.length);
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+      const PW = 420, PH = 297; // A3 quer in mm
       for (let i = 0; i < pageEls.length; i++) {
-        const canvas = await html2canvas(pageEls[i], { scale: 2, backgroundColor: '#ffffff', windowWidth: 1587 });
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const canvas = await html2canvas(pageEls[i], { scale: 2, backgroundColor: '#ffffff', windowWidth: 1587, logging: false });
+        if (!canvas.width || !canvas.height) throw new Error('Seite ' + (i+1) + ' konnte nicht gerendert werden');
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        // Verzerrungsfrei einpassen: volle Breite, außer die Seite ist zu hoch → dann volle Höhe
+        let w = PW, h = PW * canvas.height / canvas.width;
+        if (h > PH) { h = PH; w = PH * canvas.width / canvas.height; }
         if (i > 0) doc.addPage('a3', 'landscape');
-        doc.addImage(imgData, 'JPEG', 0, 0, 420, 297);
+        doc.addImage(imgData, 'JPEG', (PW - w) / 2, 0, w, h);
       }
       doc.save('Stammtisch_' + year + '.pdf');
       showMsg('✅ PDF heruntergeladen', true);
-      document.body.removeChild(container);
+      cleanup();
     })
     .catch(err => {
       console.error(err);
       showMsg('⚠️ PDF-Erstellung fehlgeschlagen: ' + err.message, false);
-      document.body.removeChild(container);
+      cleanup();
     });
 }
 
@@ -3686,43 +3838,27 @@ function closeRenamePanel() {
   renameCtx = null;
 }
 
-function doRename() {
+async function doRename() {
   if (!renameCtx) return;
   const {type, oldVal} = renameCtx;
   const newVal = document.getElementById('renameNewVal').value.trim();
   if (!newVal || newVal === oldVal) { closeRenamePanel(); return; }
+  closeRenamePanel();
 
   if (type === 'loc') {
-    // Rename in default list
-    const locs = getLocations().map(l => l === oldVal ? newVal : l);
-    saveLocations(locs);
-    // Rename in all historical treffen (in-memory)
-    Object.values(historicalData).forEach(yr => {
-      yr.treffen.forEach(t => { if (t.ort === oldVal) t.ort = newVal; });
-    });
-    // Rename in custom treffen
-    appData.treffen.forEach(t => { if (t.ort === oldVal) t.ort = newVal; });
-    saveData();
-    renderManageList('loc');
+    locationRenameData[oldVal] = newVal;
+    delete locationRenameData[newVal]; // keine Ringe (A→B, B→A)
+    sbSetMeta('location_renames', locationRenameData);
   } else {
-    // Rename in default guest list
-    const guests = getGuests().map(g => g === oldVal ? newVal : g);
-    saveGuestsDB(guests);
-    // Rename in all historical treffen guests field
-    const renameInGuests = gStr => {
-      if (!gStr || gStr === '-') return gStr;
-      return gStr.split(/,\s*|\s+\bund\b\s+/i).map(g => g.trim() === oldVal ? newVal : g.trim()).join(', ');
-    };
-    Object.values(historicalData).forEach(yr => {
-      yr.treffen.forEach(t => { t.guests = renameInGuests(t.guests); });
-    });
-    appData.treffen.forEach(t => { t.guests = renameInGuests(t.guests); });
-    saveData();
-    renderManageList('guest');
+    guestRenameData[oldVal] = newVal;
+    delete guestRenameData[newVal];
+    sbSetMeta('guest_renames', guestRenameData);
   }
-
-  showMsg(`"${oldVal}" → "${newVal}" rückwirkend angepasst ✓`, true);
-  closeRenamePanel();
+  const n = await applyRenames(true);
+  renderManageList(type);
+  renderDashboard();
+  renderTreffen();
+  showMsg(`"${oldVal}" → "${newVal}" rückwirkend angepasst ✓` + (n ? ` (${n} Treffen in der Datenbank aktualisiert)` : ''), true);
 }
 
 // ============================================================
@@ -3844,7 +3980,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v8.9 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v9.2 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
