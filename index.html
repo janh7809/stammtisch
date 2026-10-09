@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stammtisch Statistik</title>
+<!-- Home-Bildschirm: Symbol (Anker + Bier) und Name "Stammtisch" -->
+<meta name="apple-mobile-web-app-title" content="Stammtisch">
+<meta name="application-name" content="Stammtisch">
+<meta name="theme-color" content="#1a3f7a">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -235,6 +242,16 @@
   .statut-list li:last-child { border-bottom: none; }
   .statut-num { color: var(--gold); font-weight: 700; min-width: 24px; }
   .statut-text { white-space: pre-line; flex: 1; min-width: 0; }
+  /* Treffen-Tabelle: auf dem Handy steht die Begründung unter dem Status statt in einer eigenen Spalte */
+  .tr-reason-inline, .tr-reason-inline-th { display: none; }
+  .tr-reason-inline { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: normal; line-height: 1.3; }
+  @media (max-width: 640px) {
+    .tr-reason-col { width: 0 !important; padding: 0 !important; font-size: 0 !important; overflow: hidden; }
+    .tr-reason-inline, .tr-reason-inline-th { display: block; }
+    .tr-reason-inline-th { display: inline; }
+    .tr-status-cell { white-space: normal !important; }
+    .tr-status-th { width: auto !important; }
+  }
   .statut-move-btn {
     padding: 0.15rem 0.45rem; font-size: 0.75rem; line-height: 1;
     border-radius: 6px; border: 1px solid var(--border); background: none;
@@ -1810,7 +1827,9 @@ function renderDashboard() {
   const ranked = members.map(m => {
     const pMax = personalMaxP[m] || maxP;
     return {name:m, pts:totals[m]||0, pct: pMax > 0 ? (totals[m]||0)/pMax : 0};
-  }).sort((a,b)=>b.pts-a.pts);
+  });
+  const rankOrder = rankByPointsAndStreaks(members, totals, treffen);
+  ranked.sort((a,b) => rankOrder.indexOf(a.name) - rankOrder.indexOf(b.name));
   const maxPts = ranked[0]?.pts || 1; // first place = 100% bar width
 
   const table = document.getElementById('rankingTable');
@@ -2019,6 +2038,36 @@ function renderMemberLineChart(treffen, members) {
 
 // Berechnet für jedes Mitglied die längste Serie aufeinanderfolgender Teilnahmen
 // innerhalb der übergebenen Treffen-Liste — gemeinsame Funktion für Dashboard UND Overall.
+// ============================================================
+// GLEICHSTAND-REGEL für alle Platzierungen
+// ============================================================
+// 1. Mehr Teilnahmen gewinnt.
+// 2. Bei Gleichstand: längere längste Serie gewinnt.
+// 3. Ist auch die gleich: die zweitlängste Serie entscheidet, dann die drittlängste usw.
+function getStreakRuns(treffen, m) {
+  const asc = [...treffen].sort((a,b) => new Date(a.date) - new Date(b.date));
+  const runs = []; let cur = 0;
+  asc.forEach(t => {
+    if ((t.attendance[m] ?? 0) > 0) cur++;
+    else if (cur) { runs.push(cur); cur = 0; }
+  });
+  if (cur) runs.push(cur);
+  return runs.sort((a,b) => b - a);
+}
+function compareStreakRuns(ra, rb) {
+  for (let i = 0; i < Math.max(ra.length, rb.length); i++) {
+    const a = ra[i] || 0, b = rb[i] || 0;
+    if (a !== b) return b - a;
+  }
+  return 0;
+}
+// Sortiert Namen nach Punkten (points[name]), bei Gleichstand nach den Serien in `treffen`.
+function rankByPointsAndStreaks(names, points, treffen) {
+  const runs = {};
+  names.forEach(n => runs[n] = getStreakRuns(treffen, n));
+  return [...names].sort((a,b) => ((points[b]||0) - (points[a]||0)) || compareStreakRuns(runs[a], runs[b]));
+}
+
 function computeStreaks(treffen, members) {
   const ascTreffen = [...treffen].sort((a,b) => new Date(a.date) - new Date(b.date));
   const streaks = {};
@@ -2279,8 +2328,8 @@ function renderTreffen() {
       return `<tr style="border-bottom:0.5px solid var(--border)">
         <td style="padding:5px 8px;vertical-align:middle;width:30px">${getAvatar(m,'sm')}</td>
         <td style="padding:5px 8px;font-size:13px;font-weight:500;vertical-align:middle;white-space:nowrap">${escapeHtml(m)}</td>
-        <td style="padding:5px 8px;vertical-align:middle;white-space:nowrap">${statusBadge(m,val)}</td>
-        <td style="padding:5px 8px;font-size:11px;color:var(--muted);vertical-align:middle">${escapeHtml(reason)}</td>
+        <td class="tr-status-cell" style="padding:5px 8px;vertical-align:middle;white-space:nowrap">${statusBadge(m,val)}${reason ? `<div class="tr-reason-inline">${escapeHtml(reason)}</div>` : ''}</td>
+        <td class="tr-reason-col" style="padding:5px 8px;font-size:11px;color:var(--muted);vertical-align:middle">${escapeHtml(reason)}</td>
       </tr>`;
     }).join('');
 
@@ -2329,8 +2378,8 @@ function renderTreffen() {
           <tr style="background:var(--surface2)">
             <th style="width:30px;padding:4px 8px;border-bottom:0.5px solid var(--border)"></th>
             <th style="padding:4px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;border-bottom:0.5px solid var(--border);width:28%">Mitglied</th>
-            <th style="padding:4px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;border-bottom:0.5px solid var(--border);width:30%">Status</th>
-            <th style="padding:4px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;border-bottom:0.5px solid var(--border)">Begründung</th>
+            <th style="padding:4px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;border-bottom:0.5px solid var(--border);width:30%" class="tr-status-th">Status<span class="tr-reason-inline-th"> / Begründung</span></th>
+            <th style="padding:4px 8px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);text-align:left;border-bottom:0.5px solid var(--border)" class="tr-reason-col">Begründung</th>
           </tr>
         </thead>
         <tbody>${memberRows}${guestSection}</tbody>
@@ -2447,7 +2496,8 @@ function renderOverall() {
   members.forEach(m => {
     grandTotals[m] = years.reduce((sum, y) => sum + (yearStats[y].totals[m]||0), 0);
   });
-  const sortedMembers = [...members].sort((a,b) => grandTotals[b] - grandTotals[a]);
+  const allTreffenOverall = years.flatMap(y => getAllTreffen(y));
+  const sortedMembers = rankByPointsAndStreaks(members, grandTotals, allTreffenOverall);
 
   // Big comparison table — yearStats already computed above using getYearStats()
   // Zeigt "seit YYYY" oder "Mitglied YYYY–YYYY (jetzt Gast)" für beförderte/zurückgestufte Mitglieder
@@ -2485,7 +2535,7 @@ function renderOverall() {
   // Podium per year
   const podiums = years.map(y => {
     const ys = yearStats[y];
-    const ranked = Object.entries(ys.totals).sort((a,b)=>b[1]-a[1]);
+    const ranked = rankByPointsAndStreaks(Object.keys(ys.totals), ys.totals, ys.treffen).map(n => [n, ys.totals[n]]);
     const hist = historicalData[y];
     const items = ranked.slice(0,3).map(([name,pts],i) => {
       const pMax = ys.personalMaxP[name] || ys.maxP;
@@ -3431,13 +3481,15 @@ function printDashboard() {
   const ranked = members.map(m => {
     const pMax = ys.personalMaxP[m] || ys.maxP;
     return {name:m, pts:ys.totals[m]||0, pct: pMax > 0 ? (ys.totals[m]||0)/pMax : 0};
-  }).sort((a,b)=>b.pts-a.pts);
+  });
+  const rankOrderPrint = rankByPointsAndStreaks(members, ys.totals, ys.treffen);
+  ranked.sort((a,b) => rankOrderPrint.indexOf(a.name) - rankOrderPrint.indexOf(b.name));
   const maxPts = ranked[0]?.pts||1;
   const yearStats2 = {};
   years.forEach(y => { yearStats2[y] = getYearStats(y); });
   const grandTotals = {};
   allMembers.forEach(m => { grandTotals[m] = years.reduce((s,y)=>s+(yearStats2[y].totals[m]||0),0); });
-  const sortedAll = [...allMembers].sort((a,b)=>grandTotals[b]-grandTotals[a]);
+  const sortedAll = rankByPointsAndStreaks(allMembers, grandTotals, years.flatMap(y => getAllTreffen(y)));
 
   // Build HTML rows
   const homeMembers = ["Christoph","Patrick","Fabian","André","Jan","Oliver","Klaas"];
@@ -3515,7 +3567,7 @@ function printDashboard() {
   // Podiums
   const podiums = years.map(y => {
     const ys2 = yearStats2[y];
-    const top3 = Object.entries(ys2.totals).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const top3 = rankByPointsAndStreaks(Object.keys(ys2.totals), ys2.totals, ys2.treffen).slice(0,3).map(n => [n, ys2.totals[n]]);
     return '<div class="card"><h3>🏆 '+y+'</h3>'+
       top3.map(([name,pts],i)=>{
         const pMax = ys2.personalMaxP[name] || ys2.maxP;
@@ -3967,7 +4019,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v9.3 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v9.4 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
