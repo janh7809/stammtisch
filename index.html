@@ -243,6 +243,79 @@
   .statut-num { color: var(--gold); font-weight: 700; min-width: 24px; }
   .statut-text { white-space: pre-line; flex: 1; min-width: 0; }
   .tie-note { font-size: 0.72rem; color: var(--muted); line-height: 1.4; margin-top: 0.45rem; }
+  /* SIMULATION */
+  .sim-sticky { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem 0.6rem; margin-bottom: 0.9rem; box-shadow: 0 4px 12px rgba(26,63,122,0.08); }
+  .sim-st-l { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-right: 0.2rem; }
+  .sim-chip { display: inline-flex; align-items: center; gap: 0.25rem; background: var(--bg); border-radius: 999px; padding: 0.15rem 0.55rem 0.15rem 0.2rem; font-size: 0.8rem; }
+  .sim-chip b { color: var(--gold); }
+  .sim-intro { font-size: 0.88rem; line-height: 1.5; margin-bottom: 0.9rem; }
+  .sim-intro-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; margin-top: 0.6rem; }
+  .sim-badge { font-size: 0.78rem; color: var(--muted); }
+  .sim-badge.on { color: var(--gold); font-weight: 600; }
+  .sim-reset { padding: 0.4rem 0.8rem; font-size: 0.82rem; }
+  .sim-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; }
+  .sim-card h3 { font-size: 0.95rem; color: var(--gold2); margin-bottom: 0.6rem; }
+  .sim-text { font-size: 0.88rem; line-height: 1.5; margin: 0.25rem 0; }
+  .sim-muted { font-size: 0.76rem; color: var(--muted); line-height: 1.45; }
+  .sim-sub { font-size: 0.7rem; color: var(--muted); font-weight: 400; white-space: nowrap; }
+  .sim-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .sim-table th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; padding: 0.35rem 0.3rem; border-bottom: 1px solid var(--border); text-align: left; }
+  .sim-table td { padding: 0.4rem 0.3rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .sim-table .sim-r { text-align: right; white-space: nowrap; }
+  .sim-table .sim-c { text-align: center; }
+  .sim-rk { color: var(--muted); font-size: 0.78rem; width: 22px; }
+  .sim-nm { display: flex; align-items: center; gap: 0.35rem; font-weight: 600; min-width: 0; }
+  .sim-nm span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sim-win { color: var(--gold); }
+  .sim-delta { font-size: 0.7rem; margin-top: 0.15rem; }
+  .sim-delta.neg { color: var(--danger); } .sim-delta.pos { color: var(--success); }
+  .sim-scroll { overflow-x: auto; }
+  .sim-heat-t td.sim-heat { text-align: center; font-size: 0.78rem; font-weight: 600; border: 2px solid var(--surface); border-radius: 6px; min-width: 30px; padding: 0.35rem 0.1rem; }
+  .sim-range { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-bottom: 0.7rem; }
+  .sim-range select, .sim-select { font-family: inherit; font-size: 0.85rem; padding: 0.35rem 0.4rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); max-width: 100%; width: auto; }
+  .sim-select { display: block; width: 100% !important; margin-top: 0.2rem; }
+  .sim-btn { padding: 0.45rem 1rem; font-size: 0.85rem; color: #fff; }
+  .sim-grid-wrap { max-height: 460px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .sim-grid { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .sim-grid thead th { position: sticky; top: 0; background: var(--surface2); z-index: 2; padding: 0.3rem 0.1rem; font-weight: 600; }
+  .sim-grid .sim-ph { text-align: center; }
+  .sim-grid .sim-ph .avatar, .sim-grid .sim-ph > * { margin: 0 auto; }
+  .sim-pn { font-size: 0.62rem; color: var(--muted); max-width: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sim-dh { text-align: left !important; padding-left: 0.5rem !important; font-size: 0.68rem; color: var(--muted); }
+  .sim-grid td { border-top: 1px solid var(--border); }
+  .sim-dcell { padding: 0.3rem 0.4rem 0.3rem 0.5rem; cursor: pointer; white-space: nowrap; }
+  .sim-dd { font-weight: 600; }
+  .sim-ds { font-size: 0.62rem; color: var(--muted); }
+  .sim-cc { text-align: center; padding: 0.15rem; }
+  .sim-cell { width: 100%; min-width: 34px; max-width: 52px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 0.95rem; font-family: inherit; }
+  .sim-cell.s-in { background: rgba(42,122,72,0.12); border-color: rgba(42,122,72,0.45); }
+  .sim-cell.s-out { background: rgba(176,48,48,0.10); border-color: rgba(176,48,48,0.4); }
+  .sim-p { font-size: 0.68rem; color: var(--muted); }
+  tr.sim-cancel td { background: rgba(176,48,48,0.06); }
+  tr.sim-cancel .sim-dd { text-decoration: line-through; color: var(--danger); }
+  tr.sim-cancel .sim-ds { color: var(--danger); }
+  tr.sim-cancel .sim-cell { opacity: 0.35; }
+  tr.sim-held .sim-ds { color: var(--success); }
+  .sim-list { margin: 0.4rem 0 0 1.1rem; font-size: 0.86rem; line-height: 1.55; }
+  .sim-kchips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .sim-kc { border-radius: 8px; padding: 0.25rem 0.45rem; font-size: 0.72rem; text-align: center; min-width: 46px; }
+  .sim-kk { font-weight: 700; font-size: 0.8rem; }
+  .sim-as { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+  .sim-as-top { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-size: 0.88rem; }
+  .sim-slider { width: 100%; margin: 0.35rem 0 0.1rem; accent-color: var(--gold); padding: 0; border: none; background: transparent; }
+  .sim-link { background: none; border: none; color: var(--gold); cursor: pointer; font-family: inherit; font-size: 0.78rem; text-decoration: underline; padding: 0; }
+  @media (max-width: 420px) { .sim-card { padding: 0.8rem 0.65rem; } .sim-table { font-size: 0.8rem; } .sim-cell { min-width: 30px; height: 32px; } }
+  /* ANKÜNDIGUNGEN */
+  #announceBar:empty { display: none; }
+  .announce { background: linear-gradient(135deg, var(--gold2), var(--gold)); color: #fff; text-align: center; padding: 0.65rem 1rem; font-size: 0.92rem; line-height: 1.45; font-weight: 500; white-space: pre-line; box-shadow: 0 2px 10px rgba(26,63,122,0.18); }
+  .announce + .announce { border-top: 1px solid rgba(255,255,255,0.25); }
+  .announce .an-ic { margin-right: 0.35rem; }
+  .ann-item { border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem; margin-bottom: 0.75rem; background: var(--surface2); }
+  .ann-item textarea { min-height: 70px; }
+  .ann-row { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-top: 0.5rem; font-size: 0.85rem; }
+  .ann-row input[type=date] { width: auto; padding: 0.4rem 0.5rem; }
+  .ann-row input[type=checkbox] { width: auto; }
+  .ann-state { font-size: 0.75rem; color: var(--muted); }
   .quote-info { background: rgba(42,95,168,0.07); border: 1px solid rgba(42,95,168,0.22); border-left: 3px solid var(--gold); border-radius: var(--radius); padding: 0.6rem 0.85rem; margin: 0 0 0.75rem; font-size: 0.8rem; line-height: 1.45; color: var(--text); }
   .quote-info b { color: var(--gold); }
   .quote-info .qi-sub { color: var(--muted); font-size: 0.74rem; margin-top: 0.25rem; }
@@ -440,6 +513,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
+<!-- ANKÜNDIGUNGEN (im Adminbereich pflegbar) -->
+<div id="announceBar"></div>
 
 <!-- BOTTOM NAV (mobile-first) -->
 <div class="bottom-nav">
@@ -451,6 +526,9 @@
   </button>
   <button class="bnav-btn" id="bnav-overall" onclick="showPage('overall')">
     <span class="bnav-icon">🏆</span><span class="bnav-label">Overall</span>
+  </button>
+  <button class="bnav-btn" id="bnav-simulation" onclick="showPage('simulation')">
+    <span class="bnav-icon">🎲</span><span class="bnav-label">Simulation</span>
   </button>
   <button class="bnav-btn" id="bnav-admin" onclick="showPage('admin')" style="display:none">
     <span class="bnav-icon">⚙️</span><span class="bnav-label">Admin</span>
@@ -557,6 +635,15 @@
   <div id="overallContent"></div>
 </div>
 
+<!-- SIMULATION PAGE -->
+<div class="page" id="page-simulation">
+  <div class="hero" style="padding:2rem 0 1.25rem">
+    <h1 style="font-size:2rem" id="simYearTitle">Simulation</h1>
+    <p>Spiel durch, wie das Jahr ausgehen könnte</p>
+  </div>
+  <div id="simContent"></div>
+</div>
+
 <!-- STATUTEN PAGE -->
 <div class="page" id="page-statuten">
   <div class="hero" style="padding:2rem 0 1.5rem">
@@ -650,6 +737,16 @@
   </div>
   <div class="admin-section">
     <div id="adminMsg"></div>
+    <div class="admin-card">
+      <h3>📣 Ankündigungen</h3>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.75rem">Erscheinen als Banner ganz oben auf jeder Seite – für alle Besucher. Mit „Anzeigen bis“ verschwindet eine Ankündigung nach diesem Tag automatisch.</p>
+      <div id="announceAdminList"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:0.25rem">
+        <button class="btn-ghost" onclick="addAnnouncement()">+ Neue Ankündigung</button>
+        <button class="btn-primary" onclick="saveAnnouncements()">Ankündigungen speichern</button>
+      </div>
+      <div id="announceAdminMsg" style="margin-top:0.5rem;font-size:0.85rem"></div>
+    </div>
     <div class="admin-card">
       <h3>Neues Treffen eintragen</h3>
       <div class="form-row">
@@ -1092,9 +1189,12 @@ async function loadFromSupabase() {
     if (gRen) guestRenameData = Object.assign({}, DEFAULT_GUEST_RENAMES, gRen);
     const lRen = await sbMeta('location_renames');
     if (lRen) locationRenameData = lRen;
+    const ann = await sbMeta('announcements');
+    if (Array.isArray(ann)) { announcementData = ann; localStorage.setItem('st_announcements', JSON.stringify(ann)); }
   } catch(e) { console.error('Supabase load error:', e); }
   await applyRenames(isAdmin); // Namen vereinheitlichen; als Admin auch dauerhaft in der Datenbank
   showLoadingBanner(false);
+  renderAnnouncements();
   renderDashboard();
   renderStatuten();
 }
@@ -1865,6 +1965,9 @@ function renderDashboard() {
   renderExtraStats(treffen, members, stattgefunden);
   renderMemberLineChart(treffen, members);
   renderPlausibility(currentDashYear);
+  // Simulation offen? Nach Datenänderungen (z. B. Laden aus der Datenbank) neu rechnen
+  const simPage = document.getElementById('page-simulation');
+  if (simPage && simPage.classList && simPage.classList.contains && simPage.classList.contains('active')) renderSimulation();
 }
 
 function renderPlausibility(year) {
@@ -2817,6 +2920,7 @@ function renderAdmin() {
     document.getElementById('page-admin').innerHTML = '<div style="padding:3rem;text-align:center;color:var(--muted)">Bitte zuerst anmelden.</div>';
     return;
   }
+  renderAnnouncementAdmin();
   renderAttendanceGrid();
   renderMemberList();
   renderStatutenAdmin();
@@ -3176,6 +3280,638 @@ function doLogout() {
   showPage('dashboard');
 }
 
+
+// ============================================================
+// ANKÜNDIGUNGEN — Banner ganz oben, im Adminbereich pflegbar (Datenbank-Schlüssel "announcements")
+// ============================================================
+const DEFAULT_ANNOUNCEMENTS = [
+  { text: 'Schreinachtsfeier 🎅 ist am Freitag, 18.12.2026 um 18:00 Uhr in der Alten Post! Hunger und gute Laune mitbringen!', until: '2026-12-18', active: true }
+];
+let announcementData = (() => {
+  try { const ls = JSON.parse(localStorage.getItem('st_announcements') || 'null'); if (Array.isArray(ls)) return ls; } catch (e) {}
+  return DEFAULT_ANNOUNCEMENTS.map(a => Object.assign({}, a));
+})();
+function todayYmd() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function isAnnouncementVisible(a) { return a && a.active !== false && (a.text || '').trim() && (!a.until || todayYmd() <= a.until); }
+function renderAnnouncements() {
+  const el = document.getElementById('announceBar');
+  if (!el) return;
+  el.innerHTML = (announcementData || []).filter(isAnnouncementVisible)
+    .map(a => `<div class="announce"><span class="an-ic">📣</span>${escapeHtml(a.text.trim())}</div>`).join('');
+}
+function renderAnnouncementAdmin() {
+  const el = document.getElementById('announceAdminList');
+  if (!el) return;
+  if (!announcementData.length) { el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.75rem">Keine Ankündigungen – es wird kein Banner angezeigt.</div>'; return; }
+  el.innerHTML = announcementData.map((a, i) => {
+    const vis = isAnnouncementVisible(a);
+    const state = vis ? '🟢 wird angezeigt' : (a.active === false ? '⚪ ausgeblendet' : (a.until && todayYmd() > a.until ? '⚪ abgelaufen' : '⚪ leer'));
+    return `<div class="ann-item">
+      <textarea id="annText${i}" placeholder="Text der Ankündigung …">${escapeHtml(a.text || '')}</textarea>
+      <div class="ann-row">
+        <label style="display:flex;align-items:center;gap:0.35rem"><input type="checkbox" id="annActive${i}" ${a.active !== false ? 'checked' : ''}> anzeigen</label>
+        <label style="display:flex;align-items:center;gap:0.35rem">bis <input type="date" id="annUntil${i}" value="${a.until || ''}"></label>
+        <span class="ann-state">${state}</span>
+        <button class="btn-ghost" style="margin-left:auto;padding:0.35rem 0.7rem" onclick="deleteAnnouncement(${i})">🗑 Löschen</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function readAnnouncementForm() {
+  announcementData = announcementData.map((a, i) => {
+    const t = document.getElementById('annText' + i), act = document.getElementById('annActive' + i), u = document.getElementById('annUntil' + i);
+    return t ? { text: t.value, active: act.checked, until: u.value || '' } : a;
+  });
+}
+function addAnnouncement() { readAnnouncementForm(); announcementData.push({ text: '', active: true, until: '' }); renderAnnouncementAdmin(); }
+function deleteAnnouncement(i) {
+  readAnnouncementForm();
+  if (!confirm('Diese Ankündigung löschen? (Wirksam nach „Ankündigungen speichern“)')) return;
+  announcementData.splice(i, 1); renderAnnouncementAdmin();
+}
+async function saveAnnouncements() {
+  readAnnouncementForm();
+  announcementData = announcementData.filter(a => (a.text || '').trim());
+  localStorage.setItem('st_announcements', JSON.stringify(announcementData));
+  await sbSetMeta('announcements', announcementData);
+  renderAnnouncements(); renderAnnouncementAdmin();
+  const msg = document.getElementById('announceAdminMsg');
+  if (msg) { msg.innerHTML = '<span style="color:var(--success)">✅ Gespeichert – der Banner ist für alle aktualisiert.</span>'; setTimeout(() => { msg.innerHTML = ''; }, 4000); }
+}
+
+// ============================================================
+// SIMULATION — rein lokal im Browser. Nichts wird gespeichert:
+// Eingaben leben nur in dieser Variable, beim Neuladen ist alles zurückgesetzt.
+// ============================================================
+const SIM_RUNS = 5000;
+const SIM_SEED = 20230105; // fester Startwert: gleiche Eingaben → exakt gleiches Ergebnis
+const SIM_BASIS = {
+  mix:  { label: 'Ausgewogen (empfohlen)', text: 'Dieses Jahr, ergänzt um die Vorjahre – je mehr Termine dieses Jahr schon gelaufen sind, desto mehr zählt dieses Jahr.' },
+  year: { label: 'Nur dieses Jahr', text: 'Nur die bisherigen Termine dieses Jahres.' },
+  form: { label: 'Aktuelle Form (letzte 8)', text: 'Nur die letzten 8 stattgefundenen Stammtische – wer gerade einen Lauf hat, wird stärker.' },
+  prev: { label: 'Nur Vorjahre', text: 'Nur das Verhalten aus den Vorjahren (das letzte Jahr zählt am meisten).' },
+};
+let simState = { year: null, plan: {}, dateStatus: {}, overrides: {}, basis: 'mix', catchA: null, catchB: null, yearOffset: 0 };
+let simModel = null, simTimer = null, simLast = null;
+
+function simRng(seed) { // mulberry32 – kleiner, schneller Zufallsgenerator mit Startwert
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function simIsCancelled(t) { return t.ort === '-' || !t.ort || Object.values(t.attendance || {}).every(v => !v); }
+function simYmd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function simParse(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function simFmt(s, withYear) { const d = simParse(s); return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + (withYear ? d.getFullYear() : ''); }
+
+// Die noch offenen Termine: Donnerstage nach dem letzten erfassten Termin bis zum letzten
+// Stammtisch des Jahres (Adminbereich), höchstens so viele wie noch "verbleibend" sind.
+function simNextThursdays(year, lastDate, n, endDate) {
+  const d = lastDate ? simParse(lastDate) : new Date(year, 0, 0);
+  d.setDate(d.getDate() + 1);
+  while (d.getDay() !== 4) d.setDate(d.getDate() + 1);
+  const out = [];
+  while (out.length < n && (!endDate || simYmd(d) <= endDate) && (endDate || d.getFullYear() === year)) { out.push(simYmd(d)); d.setDate(d.getDate() + 7); }
+  return out;
+}
+
+// Baut das Rechenmodell: Stand bis `cutoff` (null = alles Erfasste) und Annahmen pro Person.
+function buildSimModel(year, cutoff, basis) {
+  const members = getEffectiveMembers(year);
+  const asc = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  const known = getAllTreffen(year).filter(t => !cutoff || t.date <= cutoff).sort(asc);
+  const maxP = getMaxPossible(year);
+  const lastKnown = known.length ? known[known.length - 1].date : null;
+  const dates = simNextThursdays(year, lastKnown, Math.max(0, maxP - known.length), getLastStammtischDate(year));
+  const prevYears = getAllYears().filter(y => y < year);
+  const prevTreffen = prevYears.flatMap(y => getAllTreffen(y).map(t => Object.assign({ _y: y }, t))).sort(asc);
+
+  const cur = {}, runsDone = {}, trailing = {}, rate = {}, half = {}, info = {};
+  members.forEach(m => {
+    cur[m] = 0; runsDone[m] = []; let run = 0;
+    known.forEach(t => {
+      if (isActiveMember(m, t.date)) cur[m] += (t.attendance[m] || 0);
+      if ((t.attendance[m] || 0) > 0) run++; else if (run) { runsDone[m].push(run); run = 0; }
+    });
+    trailing[m] = run;
+  });
+
+  // Anwesenheit, WENN der Stammtisch stattfindet (ausgefallene Termine werden separat über das Ausfall-Risiko abgebildet)
+  const heldCur = known.filter(t => !simIsCancelled(t));
+  const heldPrev = prevTreffen.filter(t => !simIsCancelled(t));
+  const pres = (t, m) => (t.attendance[m] || 0) > 0;
+  const stat = {};
+  members.forEach(m => {
+    const curT = heldCur.filter(t => isActiveMember(m, t.date));
+    const xCur = curT.filter(t => pres(t, m)).length, nCur = curT.length;
+    let wx = 0, wn = 0;
+    prevYears.forEach(y => {
+      const w = Math.pow(0.6, year - 1 - y); // Vorjahr 1,0 · davor 0,6 · davor 0,36 …
+      heldPrev.filter(t => t._y === y && isActiveMember(m, t.date)).forEach(t => { wn += w; if (pres(t, m)) wx += w; });
+    });
+    const recent = heldPrev.concat(heldCur).filter(t => isActiveMember(m, t.date)).slice(-8);
+    const allPres = heldPrev.concat(heldCur).filter(t => pres(t, m));
+    stat[m] = { xCur, nCur, aPrev: wn > 0 ? wx / wn : null, form: recent.length ? recent.filter(t => pres(t, m)).length / recent.length : null, nForm: recent.length,
+      half: allPres.length ? allPres.filter(t => t.attendance[m] === 0.5).length / allPres.length : 0.05 };
+  });
+  const vals = members.map(m => stat[m].nCur ? stat[m].xCur / stat[m].nCur : stat[m].aPrev).filter(v => v != null);
+  const group = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0.6;
+  members.forEach(m => {
+    const s = stat[m], prior = s.aPrev != null ? s.aPrev : group;
+    const mix = (s.xCur + 8 * prior) / (s.nCur + 8);
+    let a = mix;
+    if (basis === 'year') a = s.nCur >= 3 ? s.xCur / s.nCur : mix;
+    if (basis === 'form') a = s.form != null && s.nForm >= 3 ? s.form : mix;
+    if (basis === 'prev') a = prior;
+    rate[m] = Math.min(0.98, Math.max(0.02, a));
+    half[m] = s.half;
+    info[m] = s;
+  });
+
+  // Ausfall-Risiko pro Monat (aus allen bisher bekannten Terminen, geglättet)
+  const allKnown = prevTreffen.concat(known);
+  const totM = new Array(12).fill(0), canM = new Array(12).fill(0);
+  allKnown.forEach(t => { const mo = simParse(t.date).getMonth(); totM[mo]++; if (simIsCancelled(t)) canM[mo]++; });
+  const tot = totM.reduce((s, v) => s + v, 0), can = canM.reduce((s, v) => s + v, 0);
+  const cAll = tot ? can / tot : 0.1;
+  const cancelMonth = totM.map((n, i) => (canM[i] + 4 * cAll) / (n + 4));
+  const cancelP = dates.map(d => cancelMonth[simParse(d).getMonth()]);
+
+  return { year, cutoff, members, cur, runsDone, trailing, rate, half, info, dates, cancelP, cancelMonth,
+           verstrichen: known.length, maxP, lastKnown, known };
+}
+
+function simScenarioEmpty() { return { plan: {}, dateStatus: {}, overrides: {} }; }
+
+// Monte-Carlo: spielt die restlichen Termine `runs`-mal durch.
+function runSim(model, sc, runs) {
+  const rng = simRng(SIM_SEED);
+  const M = model.members, P = M.length, D = model.dates.length;
+  const rate = M.map(m => (sc.overrides[m] != null ? sc.overrides[m] : model.rate[m]));
+  const half = M.map(m => model.half[m]);
+  const fixed = model.dates.map(d => M.map(m => ((sc.plan[d] || {})[m]) || null));
+  const status = model.dates.map((d, i) => {
+    if (sc.dateStatus[d]) return sc.dateStatus[d];
+    return fixed[i].filter(x => x === 'in').length >= 2 ? 'held' : null;
+  });
+  const finalPts = M.map(() => new Float32Array(runs));
+  const longest = M.map(() => new Uint16Array(runs));
+  const place = M.map(() => new Array(P).fill(0));
+  const streakWin = new Array(P).fill(0);
+  let cancelSum = 0;
+  const pres = new Array(P);
+  for (let r = 0; r < runs; r++) {
+    const pts = M.map(m => model.cur[m]);
+    const trail = M.map(m => model.trailing[m]);
+    const runsArr = M.map(m => model.runsDone[m].slice());
+    for (let i = 0; i < D; i++) {
+      const u0 = rng();
+      let cancelled = status[i] === 'cancel' || (status[i] !== 'held' && u0 < model.cancelP[i]);
+      let cnt = 0;
+      for (let j = 0; j < P; j++) {
+        const u1 = rng(), u2 = rng(); // immer ziehen → gleiche Zufallszahlen für jedes Szenario (stabile Vergleiche)
+        const f = fixed[i][j];
+        const v = f === 'in' ? 1 : f === 'out' ? 0 : (u1 < rate[j] ? (u2 < half[j] ? 0.5 : 1) : 0);
+        pres[j] = cancelled ? 0 : v;
+        if (pres[j] > 0) cnt++;
+      }
+      if (!cancelled && cnt < 2) cancelled = true; // Statut: mind. zwei Personen
+      if (cancelled) cancelSum++;
+      for (let j = 0; j < P; j++) {
+        if (!cancelled && pres[j] > 0) { pts[j] += pres[j]; trail[j]++; }
+        else { if (trail[j]) runsArr[j].push(trail[j]); trail[j] = 0; }
+      }
+    }
+    for (let j = 0; j < P; j++) {
+      if (trail[j]) runsArr[j].push(trail[j]);
+      runsArr[j].sort((a, b) => b - a);
+      finalPts[j][r] = pts[j];
+      longest[j][r] = runsArr[j][0] || 0;
+    }
+    const idx = M.map((_, j) => j);
+    idx.sort((a, b) => (pts[b] - pts[a]) || compareStreakRuns(runsArr[a], runsArr[b]));
+    idx.forEach((j, k) => place[j][k]++);
+    let best = 0;
+    for (let j = 1; j < P; j++) if (compareStreakRuns(runsArr[j], runsArr[best]) < 0) best = j;
+    if ((runsArr[best][0] || 0) > 0) streakWin[best]++;
+  }
+  // Rechnerische Grenzen (ohne Zufall)
+  const maxPts = {}, minPts = {};
+  M.forEach((m, j) => {
+    let mx = model.cur[m], mn = model.cur[m];
+    model.dates.forEach((d, i) => {
+      if (status[i] === 'cancel' || fixed[i][j] === 'out') return;
+      mx += 1;
+      if (fixed[i][j] === 'in' && fixed[i].filter(x => x === 'in').length >= 2) mn += 1;
+    });
+    maxPts[m] = mx; minPts[m] = mn;
+  });
+  const out = { runs, members: M, byName: {}, cancelExp: cancelSum / runs, maxPts, minPts };
+  M.forEach((m, j) => {
+    const sorted = Array.from(finalPts[j]).sort((a, b) => a - b);
+    const q = p => sorted[Math.min(runs - 1, Math.floor(p * runs))];
+    out.byName[m] = {
+      pts: finalPts[j], mean: sorted.reduce((s, v) => s + v, 0) / runs, p10: q(0.1), p90: q(0.9),
+      place: place[j].map(c => c / runs), win: place[j][0] / runs, streakWin: streakWin[j] / runs,
+      longestMean: Array.from(longest[j]).reduce((s, v) => s + v, 0) / runs,
+    };
+  });
+  return out;
+}
+
+// Wahrscheinlichkeit, dass A mit genau k weiteren Teilnahmen vor B landet (Gleichstand halb gewertet).
+function simCatchUp(model, res, a, b) {
+  const curA = model.cur[a], pb = res.byName[b].pts, n = pb.length;
+  const restA = model.dates.filter((d, i) => simState.dateStatus[d] !== 'cancel' && ((simState.plan[d] || {})[a]) !== 'out').length;
+  const chance = [];
+  for (let k = 0; k <= restA; k++) {
+    let s = 0; const v = curA + k;
+    for (let r = 0; r < n; r++) s += v > pb[r] ? 1 : v === pb[r] ? 0.5 : 0;
+    chance.push(s / n);
+  }
+  const safeK = (() => { for (let k = 0; k <= restA; k++) if (curA + k > res.maxPts[b]) return k; return null; })();
+  return { restA, chance, safeK, curA, curB: model.cur[b], maxB: res.maxPts[b] };
+}
+
+// Prognose-Check: Was hätte die Simulation vor einem Jahr am gleichen Tag gesagt?
+function simBacktest(year, refDate) {
+  const py = year - 1;
+  if (!getAllYears().includes(py)) return null;
+  const ref = refDate || simYmd(new Date());
+  const cutoff = py + '-' + ref.slice(5);
+  const model = buildSimModel(py, cutoff, 'mix');
+  if (!model.dates.length || model.verstrichen < 1) return null;
+  const res = runSim(model, simScenarioEmpty(), 3000);
+  const ys = getYearStats(py);
+  const actualOrder = rankByPointsAndStreaks(ys.members, ys.totals, ys.treffen);
+  return { py, cutoff, model, res, actual: ys.totals, actualOrder };
+}
+
+function simPct(v) {
+  if (v <= 0) return '0 %';
+  if (v >= 1) return '100 %';
+  if (v < 0.005) return '<1 %';
+  if (v > 0.995) return '>99 %';
+  return Math.round(v * 100) + ' %';
+}
+// Wie simPct, aber 100 % / 0 % nur, wenn es rechnerisch feststeht – sonst ">99 %" / "<1 %".
+function simPctSure(v, sure, impossible) {
+  if (sure) return '100 %';
+  if (impossible) return '0 %';
+  if (v >= 0.995) return '>99 %';
+  if (v < 0.005) return '<1 %';
+  return simPct(v);
+}
+function simNum(v) { return (Math.round(v * 10) / 10).toString().replace('.', ','); }
+
+// ---------- Simulation: Oberfläche ----------
+function simActiveYear() { return new Date().getFullYear() + (simState.yearOffset || 0); }
+function simInputsCount() {
+  return Object.values(simState.plan).reduce((s, p) => s + Object.keys(p).length, 0)
+    + Object.keys(simState.dateStatus).length + Object.keys(simState.overrides).length;
+}
+function simOrder(res) {
+  return [...res.members].sort((a, b) => (res.byName[b].mean - res.byName[a].mean) || (res.byName[b].win - res.byName[a].win));
+}
+function simName(n) { return getAvatar(n, 'sm') + '<span>' + escapeHtml(n) + '</span>'; }
+
+function renderSimulation() {
+  const el = document.getElementById('simContent');
+  if (!el) return;
+  const year = simActiveYear();
+  if (simState.year !== year) Object.assign(simState, { year, plan: {}, dateStatus: {}, overrides: {}, catchA: null, catchB: null });
+  simModel = buildSimModel(year, null, simState.basis);
+  const m = simModel;
+  // Eingaben für Termine, die inzwischen erfasst wurden, fallen automatisch weg
+  Object.keys(simState.plan).forEach(d => { if (!m.dates.includes(d)) delete simState.plan[d]; });
+  Object.keys(simState.dateStatus).forEach(d => { if (!m.dates.includes(d)) delete simState.dateStatus[d]; });
+  Object.keys(simState.overrides).forEach(n => { if (!m.members.includes(n)) delete simState.overrides[n]; });
+  const yearTitle = document.getElementById('simYearTitle');
+  if (yearTitle) yearTitle.textContent = 'Simulation ' + year;
+
+  if (!m.dates.length) {
+    el.innerHTML = `<div class="sim-card"><h3>🏁 ${year} ist abgeschlossen</h3>
+      <p class="sim-text">Alle ${m.maxP} Stammtische des Jahres sind gelaufen – hier gibt es nichts mehr zu simulieren. Die Simulation für ${year + 1} startet automatisch zum Jahreswechsel.</p>
+      <button class="btn-primary" style="margin-top:0.75rem" onclick="simState.yearOffset=(simState.yearOffset||0)+1;renderSimulation()">${year + 1} schon jetzt durchspielen</button></div>`;
+    return;
+  }
+  const backBtn = simState.yearOffset ? ` <button class="sim-link" onclick="simState.yearOffset=0;renderSimulation()">← zurück zu ${new Date().getFullYear()}</button>` : '';
+  el.innerHTML = `
+    <div class="sim-sticky" id="simSticky"></div>
+    <div class="sim-intro">
+      <div><b>Stand ${year}:</b> ${m.verstrichen} von ${m.maxP} Stammtischen verstrichen, noch <b>${m.dates.length}</b> offen (${simFmt(m.dates[0])}–${simFmt(m.dates[m.dates.length - 1], true)}).${backBtn}</div>
+      <div class="sim-muted">Tippe im Planer an, wer wann sicher da ist oder fehlt – die Prognose rechnet sofort neu (${SIM_RUNS.toLocaleString('de-DE')} Durchläufe). Nichts wird gespeichert: Beim Neuladen der Seite ist alles zurückgesetzt.</div>
+      <div class="sim-intro-row"><span id="simInputsBadge" class="sim-badge"></span><button class="btn-ghost sim-reset" onclick="simResetAll()">↺ Alle Eingaben zurücksetzen</button></div>
+    </div>
+    <div class="sim-card" id="simComment"></div>
+    <div class="sim-card" id="simTable"></div>
+    <div class="sim-card">
+      <h3>📅 Wer kommt wann?</h3>
+      <div class="sim-muted" style="margin-bottom:0.6rem">Feld antippen: <b>❔ offen</b> (Zahl = angenommene Chance in %) → <b>✅ sicher da</b> → <b>❌ fehlt</b>. Datum antippen: <b>fällt aus</b> → <b>findet sicher statt</b> → normal.</div>
+      <div id="simRange"></div>
+      <div id="simGrid"></div>
+    </div>
+    <div class="sim-card" id="simCatch"></div>
+    <div class="sim-card" id="simStreak"></div>
+    <div class="sim-card" id="simAssume"></div>
+    <div class="sim-card" id="simCheck"></div>`;
+  simRenderRange(); simRenderGrid(); simRenderAssume(); simRecompute(); simRenderCheck();
+}
+
+function simSchedule() { clearTimeout(simTimer); simTimer = setTimeout(simRecompute, 120); }
+function simRecompute() {
+  const m = simModel;
+  if (!m || !m.dates.length || !document.getElementById('simTable')) return;
+  const sc = { plan: simState.plan, dateStatus: simState.dateStatus, overrides: simState.overrides };
+  const res = runSim(m, sc, SIM_RUNS);
+  const base = simInputsCount() ? runSim(m, simScenarioEmpty(), SIM_RUNS) : null;
+  simLast = { res, base };
+  simRenderSticky(res); simRenderComment(res, base); simRenderTable(res, base); simRenderCatch(); simRenderStreak(res); simRenderInputsBadge();
+}
+function simRenderInputsBadge() {
+  const el = document.getElementById('simInputsBadge'); if (!el) return;
+  const n = simInputsCount();
+  el.textContent = n ? `✏️ ${n} Eingabe${n === 1 ? '' : 'n'} aktiv` : 'Keine Eingaben – reine Prognose';
+  el.classList.toggle('on', n > 0);
+}
+function simResetAll() {
+  Object.assign(simState, { plan: {}, dateStatus: {}, overrides: {}, basis: 'mix' });
+  renderSimulation();
+}
+
+// Immer sichtbar oben: Siegchancen
+function simRenderSticky(res) {
+  const el = document.getElementById('simSticky'); if (!el) return;
+  const order = [...res.members].sort((a, b) => res.byName[b].win - res.byName[a].win).filter(n => res.byName[n].win >= 0.005);
+  el.innerHTML = '<span class="sim-st-l">🏆 Siegchance</span>' + order.map(n => `<span class="sim-chip">${getAvatar(n, 'sm')}${escapeHtml(n)} <b>${simWinPct(res, n)}</b></span>`).join('');
+}
+
+function simAhead(res, a, b) { // Anteil der Durchläufe, in denen a vor b liegt (Gleichstand halb)
+  const pa = res.byName[a].pts, pb = res.byName[b].pts; let s = 0;
+  for (let r = 0; r < pa.length; r++) s += pa[r] > pb[r] ? 1 : pa[r] === pb[r] ? 0.5 : 0;
+  return s / pa.length;
+}
+function simCertainWinner(res) {
+  return res.members.find(n => res.members.every(o => o === n || res.minPts[n] > res.maxPts[o])) || null;
+}
+function simCannotWin(res, n) { return res.members.some(o => o !== n && res.minPts[o] > res.maxPts[n]); }
+function simWinPct(res, n) { const c = simCertainWinner(res); return simPctSure(res.byName[n].win, c === n, (c && c !== n) || simCannotWin(res, n)); }
+
+// Kurz gesagt – regelbasiert aus den Zahlen formuliert (keine KI)
+function simRenderComment(res, base) {
+  const el = document.getElementById('simComment'); if (!el) return;
+  const m = simModel, B = res.byName, s = [];
+  const byWin = [...res.members].sort((a, b) => B[b].win - B[a].win);
+  const certain = simCertainWinner(res);
+  if (certain) s.push(`🏆 <b>${escapeHtml(certain)}</b> ist rechnerisch nicht mehr einzuholen – der Jahressieg ist entschieden.`);
+  else if (B[byWin[0]].win > 0.9) s.push(`🏆 <b>${escapeHtml(byWin[0])}</b> ist kaum noch zu stoppen: ${simWinPct(res, byWin[0])} Siegchance – rechnerisch aber noch nicht durch.`);
+  else s.push(`🏆 <b>${escapeHtml(byWin[0])}</b> geht mit ${simWinPct(res, byWin[0])} als Favorit ins Rennen${B[byWin[1]].win >= 0.05 ? `, dahinter ${escapeHtml(byWin[1])} mit ${simWinPct(res, byWin[1])}` : ''}.`);
+  const order = simOrder(res);
+  let best = null;
+  for (let i = 0; i < order.length - 1; i++) {
+    const p = simAhead(res, order[i], order[i + 1]);
+    if (!best || Math.abs(p - 0.5) < Math.abs(best.p - 0.5)) best = { i, p };
+  }
+  if (best && Math.abs(best.p - 0.5) < 0.2) {
+    const a = order[best.i], b = order[best.i + 1];
+    s.push(`⚔️ Am spannendsten ist das Duell <b>${escapeHtml(a)}</b> gegen <b>${escapeHtml(b)}</b> um Platz ${best.i + 1}: ${simPct(best.p)} zu ${simPct(1 - best.p)}.`);
+  }
+  const holder = [...res.members].sort((a, b) => B[b].streakWin - B[a].streakWin)[0];
+  if (B[holder].streakWin > 0) s.push(`🔥 Die Serien-Krone geht mit ${simPctSure(B[holder].streakWin)} an <b>${escapeHtml(holder)}</b> (im Schnitt ${simNum(B[holder].longestMean)} in Folge).`);
+  if (res.cancelExp >= 0.5) s.push(`🌧️ Erwartet werden noch etwa ${simNum(res.cancelExp)} Ausfälle.`);
+  if (base) {
+    let big = null;
+    res.members.forEach(n => { const d = B[n].mean - base.byName[n].mean; if (!big || Math.abs(d) > Math.abs(big.d)) big = { n, d }; });
+    if (big && Math.abs(big.d) >= 0.1) {
+      const wb = base.byName[big.n].win, wn = B[big.n].win;
+      s.push(`✏️ Deine Eingaben ${big.d < 0 ? 'kosten' : 'bringen'} <b>${escapeHtml(big.n)}</b> im Schnitt ${simNum(Math.abs(big.d))} Teilnahme${Math.abs(big.d) === 1 ? '' : 'n'}${Math.abs(wn - wb) >= 0.005 ? ` – Siegchance ${simPctSure(wb)} → ${simWinPct(res, big.n)}` : ''}.`);
+    }
+  }
+  el.innerHTML = `<h3>🗣️ Kurz gesagt</h3>${s.map(x => `<p class="sim-text">${x}</p>`).join('')}<div class="sim-muted" style="margin-top:0.4rem">Automatisch aus den Zahlen formuliert – keine KI.</div>`;
+}
+
+function simRenderTable(res, base) {
+  const el = document.getElementById('simTable'); if (!el) return;
+  const m = simModel, B = res.byName, order = simOrder(res), P = res.members.length;
+  const certain = simCertainWinner(res);
+  const rows = order.map((n, i) => {
+    const b = B[n], q = m.maxP > 0 ? b.mean / m.maxP * 100 : 0;
+    let delta = '';
+    if (base) {
+      const d = b.mean - base.byName[n].mean, wb = base.byName[n].win;
+      if (Math.abs(d) >= 0.05 || Math.abs(b.win - wb) >= 0.005)
+        delta = `<div class="sim-delta ${d < 0 ? 'neg' : 'pos'}">${d >= 0 ? '+' : '−'}${simNum(Math.abs(d))} durch Eingaben${Math.abs(b.win - wb) >= 0.005 ? ` · Sieg ${simPctSure(wb)} → ${simWinPct(res, n)}` : ''}</div>`;
+    }
+    return `<tr><td class="sim-rk">${i + 1}.</td><td><div class="sim-nm">${simName(n)}</div>${delta}</td>
+      <td class="sim-r">${simNum(m.cur[n])}</td>
+      <td class="sim-r"><b>${simNum(b.mean)}</b><div class="sim-sub">${simNum(b.p10)}–${simNum(b.p90)} · ≈${Math.round(q)} %</div></td>
+      <td class="sim-r"><b class="sim-win">${simWinPct(res, n)}</b>${certain === n ? '<div class="sim-sub">steht fest</div>' : ''}</td></tr>`;
+  }).join('');
+  const heat = order.map(n => `<tr><td><div class="sim-nm">${simName(n)}</div></td>${B[n].place.map(v => {
+    const a = Math.min(1, v * 1.15);
+    return `<td class="sim-heat" style="background:rgba(42,95,168,${(0.06 + a * 0.85).toFixed(2)});color:${a > 0.45 ? '#fff' : 'var(--text)'}">${v < 0.005 ? '·' : Math.round(v * 100)}</td>`;
+  }).join('')}</tr>`).join('');
+  el.innerHTML = `<h3>🏁 Prognose Endstand ${m.year}</h3>
+    <div class="sim-muted" style="margin-bottom:0.5rem">„Prognose“ = Durchschnitt aller Durchläufe; darunter die Spanne, in der 80 % der Durchläufe landen, und die erwartete Quote.</div>
+    <table class="sim-table"><thead><tr><th>#</th><th>Mitglied</th><th class="sim-r">Jetzt</th><th class="sim-r">Prognose</th><th class="sim-r">Sieg</th></tr></thead><tbody>${rows}</tbody></table>
+    <h3 style="margin-top:1.1rem">🎯 Platz-Chancen in %</h3>
+    <div class="sim-scroll"><table class="sim-table sim-heat-t"><thead><tr><th>Mitglied</th>${Array.from({ length: P }, (_, k) => `<th class="sim-c">${k + 1}.</th>`).join('')}</tr></thead><tbody>${heat}</tbody></table></div>
+    <div class="sim-muted" style="margin-top:0.4rem">Gleichstand wird wie in der Rangliste entschieden: längste Serie, dann zweitlängste usw.</div>`;
+}
+
+// ---------- Planer ----------
+function simRenderRange() {
+  const el = document.getElementById('simRange'); if (!el) return;
+  const m = simModel;
+  const dOpts = sel => m.dates.map((d, i) => `<option value="${i}"${i === sel ? ' selected' : ''}>${simFmt(d)}</option>`).join('');
+  el.innerHTML = `<div class="sim-range">
+    <span class="sim-muted">Zeitraum:</span>
+    <select id="simRP"><option value="*">Alle</option>${m.members.map((n, j) => `<option value="${j}">${escapeHtml(n)}</option>`).join('')}</select>
+    <select id="simRF">${dOpts(0)}</select><span class="sim-muted">bis</span><select id="simRT">${dOpts(Math.min(1, m.dates.length - 1))}</select>
+    <select id="simRS"><option value="out">❌ fehlt</option><option value="in">✅ da</option><option value="">❔ offen</option></select>
+    <button class="btn-primary sim-btn" onclick="simApplyRange()">Eintragen</button></div>`;
+}
+function simApplyRange() {
+  const m = simModel;
+  const p = document.getElementById('simRP').value;
+  let f = +document.getElementById('simRF').value, t = +document.getElementById('simRT').value;
+  const v = document.getElementById('simRS').value;
+  if (f > t) [f, t] = [t, f];
+  const who = p === '*' ? m.members : [m.members[+p]];
+  for (let i = f; i <= t; i++) {
+    const d = m.dates[i];
+    who.forEach(n => simSetCell(d, n, v || null));
+    simPaintRow(i);
+  }
+  simRenderInputsBadge(); simSchedule();
+}
+function simSetCell(d, n, v) {
+  if (v) { (simState.plan[d] = simState.plan[d] || {})[n] = v; }
+  else if (simState.plan[d]) { delete simState.plan[d][n]; if (!Object.keys(simState.plan[d]).length) delete simState.plan[d]; }
+}
+function simRenderGrid() {
+  const el = document.getElementById('simGrid'); if (!el) return;
+  const m = simModel;
+  const head = `<tr><th class="sim-dh">Termin</th>${m.members.map(n => `<th class="sim-ph">${getAvatar(n, 'sm')}<div class="sim-pn">${escapeHtml(n)}</div></th>`).join('')}</tr>`;
+  const wd = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+  const rows = m.dates.map((d, i) => `<tr id="simRow${i}"><td class="sim-dcell" onclick="simToggleDate(${i})"><div class="sim-dd">${wd[simParse(d).getDay()]} ${simFmt(d)}</div><div class="sim-ds" id="simDs${i}"></div></td>${m.members.map((n, j) => `<td class="sim-cc"><button class="sim-cell" id="simC${i}_${j}" onclick="simToggleCell(${i},${j})"></button></td>`).join('')}</tr>`).join('');
+  el.innerHTML = `<div class="sim-grid-wrap"><table class="sim-grid"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
+  m.dates.forEach((d, i) => simPaintRow(i));
+}
+function simPaintRow(i) {
+  const m = simModel, d = m.dates[i], st = simState.dateStatus[d] || null, plan = simState.plan[d] || {};
+  const row = document.getElementById('simRow' + i); if (!row) return;
+  const ins = m.members.filter(n => plan[n] === 'in').length;
+  row.className = st === 'cancel' ? 'sim-cancel' : (st === 'held' || ins >= 2) ? 'sim-held' : '';
+  document.getElementById('simDs' + i).textContent = st === 'cancel' ? 'fällt aus' : st === 'held' ? 'findet statt' : ins >= 2 ? 'findet statt (2+ da)' : 'Ausfall-Risiko ' + simPct(m.cancelP[i]);
+  m.members.forEach((n, j) => {
+    const b = document.getElementById(`simC${i}_${j}`), v = plan[n];
+    const r = simState.overrides[n] != null ? simState.overrides[n] : m.rate[n];
+    b.className = 'sim-cell ' + (v === 'in' ? 's-in' : v === 'out' ? 's-out' : 's-open');
+    b.innerHTML = v === 'in' ? '✅' : v === 'out' ? '❌' : `<span class="sim-p">${Math.round(r * 100)}</span>`;
+    b.title = n + ' am ' + simFmt(d, true);
+  });
+}
+function simToggleCell(i, j) {
+  const m = simModel, d = m.dates[i], n = m.members[j];
+  const v = (simState.plan[d] || {})[n] || null;
+  simSetCell(d, n, v === null ? 'in' : v === 'in' ? 'out' : null);
+  simPaintRow(i); simRenderInputsBadge(); simSchedule();
+}
+function simToggleDate(i) {
+  const d = simModel.dates[i], v = simState.dateStatus[d] || null;
+  const nv = v === null ? 'cancel' : v === 'cancel' ? 'held' : null;
+  if (nv) simState.dateStatus[d] = nv; else delete simState.dateStatus[d];
+  simPaintRow(i); simRenderInputsBadge(); simSchedule();
+}
+
+// ---------- Aufhol-Rechner ----------
+function simRenderCatch() {
+  const el = document.getElementById('simCatch'); if (!el || !simLast) return;
+  const m = simModel, res = simLast.res, order = simOrder(res);
+  let a = simState.catchA, b = simState.catchB;
+  if (!m.members.includes(a)) a = order[Math.min(1, order.length - 1)];
+  if (!m.members.includes(b) || b === a) b = order.find(n => n !== a);
+  simState.catchA = a; simState.catchB = b;
+  const opt = sel => m.members.map(n => `<option${n === sel ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('');
+  const c = simCatchUp(m, res, a, b);
+  const A = escapeHtml(a), Bn = escapeHtml(b);
+  let body;
+  if (c.curA + c.restA < c.curB) {
+    body = `<p class="sim-text">❌ Nicht mehr einholbar: Selbst wenn ${A} alle ${c.restA} möglichen Termine besucht, kommt er nur auf ${simNum(c.curA + c.restA)} – ${Bn} hat schon ${simNum(c.curB)}.</p>`;
+  } else {
+    const k50 = c.chance.findIndex(v => v >= 0.5), k90 = c.chance.findIndex(v => v >= 0.9);
+    const lines = [];
+    lines.push(k50 >= 0 ? `Für eine <b>50:50-Chance</b> muss ${A} noch mindestens <b>${k50}×</b> kommen.` : `Eine 50:50-Chance erreicht ${A} selbst mit allen ${c.restA} Terminen nicht.`);
+    if (k90 >= 0) lines.push(`Für <b>90 %</b> Sicherheit: mindestens <b>${k90}×</b>.`);
+    lines.push(c.safeK != null ? `<b>Ganz sicher</b> vorbei – egal, was ${Bn} macht: ab <b>${c.safeK}×</b>.` : `Ganz sicher geht es nicht mehr: Kommt ${Bn} jedes Mal, bleibt ${Bn} vorne (höchstens Gleichstand).`);
+    let ks = c.chance.map((v, k) => k);
+    if (ks.length > 14) {
+      const lo = Math.max(0, c.chance.findIndex(v => v > 0.005) - 1), hi0 = c.chance.findIndex(v => v > 0.995);
+      const hi = hi0 < 0 ? c.restA : hi0;
+      const step = Math.max(1, Math.ceil((hi - lo) / 12));
+      ks = []; for (let k = lo; k <= hi; k += step) ks.push(k);
+      [k50, k90, hi].forEach(k => { if (k >= 0 && !ks.includes(k)) ks.push(k); });
+      ks.sort((x, y) => x - y);
+    }
+    const chips = c.chance.every(v => v < 0.005) ? '' : ks.map(k => { const v = c.chance[k]; return `<div class="sim-kc" style="background:rgba(42,95,168,${(0.08 + v * 0.8).toFixed(2)});color:${v > 0.5 ? '#fff' : 'var(--text)'}"><div class="sim-kk">${k}×</div><div>${simPctSure(v, c.curA + k > c.maxB)}</div></div>`; }).join('');
+    body = `<p class="sim-text">${A} hat ${simNum(c.curA)}, ${Bn} hat ${simNum(c.curB)}. ${A} kann noch bei ${c.restA} Terminen dabei sein.</p>
+      <ul class="sim-list">${lines.map(l => `<li>${l}</li>`).join('')}</ul>
+      ${chips ? `<div class="sim-muted" style="margin:0.5rem 0 0.3rem">Chance, am Jahresende vor ${Bn} zu liegen, wenn ${A} noch so oft kommt:</div>
+      <div class="sim-kchips">${chips}</div>` : ''}`;
+  }
+  el.innerHTML = `<h3>🏃 Aufhol-Rechner</h3>
+    <div class="sim-range" style="margin-bottom:0.6rem"><select id="simCA" onchange="simCatchChange()">${opt(a)}</select><span class="sim-muted">will vorbei an</span><select id="simCB" onchange="simCatchChange()">${opt(b)}</select></div>
+    ${body}
+    <div class="sim-muted" style="margin-top:0.5rem">Für ${Bn} gelten deine Eingaben und Annahmen. Gleichstand zählt hier halb (in echt entscheidet die Serie).</div>`;
+}
+function simCatchChange() {
+  simState.catchA = document.getElementById('simCA').value;
+  simState.catchB = document.getElementById('simCB').value;
+  if (simState.catchA === simState.catchB) simState.catchB = null;
+  simRenderCatch();
+}
+
+// ---------- Serien ----------
+function simRenderStreak(res) {
+  const el = document.getElementById('simStreak'); if (!el) return;
+  const m = simModel, B = res.byName;
+  const order = [...res.members].sort((a, b) => (B[b].streakWin - B[a].streakWin) || (B[b].longestMean - B[a].longestMean));
+  const rows = order.map(n => {
+    const bestSoFar = Math.max(m.trailing[n], ...m.runsDone[n], 0);
+    return `<tr><td><div class="sim-nm">${simName(n)}</div></td><td class="sim-r">${m.trailing[n]}×</td><td class="sim-r">${bestSoFar}×</td><td class="sim-r">${simNum(B[n].longestMean)}</td><td class="sim-r"><b class="sim-win">${simPctSure(B[n].streakWin)}</b></td></tr>`;
+  }).join('');
+  el.innerHTML = `<h3>🔥 Serien-Prognose</h3>
+    <table class="sim-table"><thead><tr><th>Mitglied</th><th class="sim-r">Läuft</th><th class="sim-r">Best</th><th class="sim-r">Ø Ende</th><th class="sim-r">Krone</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="sim-muted" style="margin-top:0.4rem">Läuft = aktuelle Serie · Best = längste Serie bisher · Ø Ende = längste Serie am Jahresende im Schnitt · Krone = Chance auf die längste Serie des Jahres (bei Gleichstand zweitlängste Serie usw.).</div>`;
+}
+
+// ---------- Annahmen ----------
+function simRenderAssume() {
+  const el = document.getElementById('simAssume'); if (!el) return;
+  const m = simModel;
+  const months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+  const usedMonths = [...new Set(m.dates.map(d => simParse(d).getMonth()))];
+  const rows = m.members.map((n, j) => {
+    const s = m.info[n], ov = simState.overrides[n], val = Math.round((ov != null ? ov : m.rate[n]) * 100);
+    const parts = [];
+    if (s.nCur) parts.push(`dieses Jahr ${s.xCur} von ${s.nCur}`);
+    if (s.aPrev != null) parts.push(`Vorjahre ${Math.round(s.aPrev * 100)} %`);
+    if (s.form != null) parts.push(`letzte ${s.nForm}: ${Math.round(s.form * 100)} %`);
+    parts.push(`½-Anteil ${Math.round(m.half[n] * 100)} %`);
+    return `<div class="sim-as">
+      <div class="sim-as-top"><div class="sim-nm">${simName(n)}</div><div><b id="simOV${j}">${val} %</b>${ov != null ? ` <button class="sim-link" onclick="simResetOverride(${j})" title="auf berechneten Wert zurück">↺ ${Math.round(m.rate[n] * 100)} %</button>` : ''}</div></div>
+      <input type="range" min="0" max="100" step="5" value="${val}" oninput="simSetOverride(${j}, this.value)" onchange="simRenderAssume()" class="sim-slider">
+      <div class="sim-sub">${parts.join(' · ')}</div></div>`;
+  }).join('');
+  el.innerHTML = `<h3>⚙️ Annahmen</h3>
+    <div class="sim-muted" style="margin-bottom:0.5rem">Pro Person: Wie wahrscheinlich kommt sie, wenn der Stammtisch stattfindet? Mit dem Regler kannst du „was wäre, wenn …“ durchspielen. Feste Eingaben im Planer haben immer Vorrang.</div>
+    <label class="sim-muted" for="simBasis">Grundlage der Prognose</label>
+    <select id="simBasis" class="sim-select" onchange="simSetBasis(this.value)">${Object.entries(SIM_BASIS).map(([k, v]) => `<option value="${k}"${k === simState.basis ? ' selected' : ''}>${v.label}</option>`).join('')}</select>
+    <div class="sim-muted" style="margin:0.3rem 0 0.75rem">${SIM_BASIS[simState.basis].text}</div>
+    ${rows}
+    <div class="sim-muted" style="margin-top:0.75rem"><b>Ausfall-Risiko je Monat</b> (aus allen bisherigen Jahren): ${usedMonths.map(i => `${months[i]} ${simPct(m.cancelMonth[i])}`).join(' · ')}. Zusätzlich gilt das Statut: Kommen weniger als zwei, fällt der Stammtisch aus und alle bekommen 0. Zu-spät-Kommen (½) passiert so oft wie bisher.</div>`;
+}
+function simSetOverride(j, v) {
+  const n = simModel.members[j];
+  simState.overrides[n] = +v / 100;
+  const lbl = document.getElementById('simOV' + j); if (lbl) lbl.textContent = v + ' %';
+  simModel.dates.forEach((d, i) => simPaintRow(i));
+  simRenderInputsBadge(); simSchedule();
+}
+function simResetOverride(j) {
+  delete simState.overrides[simModel.members[j]];
+  simRenderAssume(); simModel.dates.forEach((d, i) => simPaintRow(i)); simRenderInputsBadge(); simSchedule();
+}
+function simSetBasis(v) {
+  simState.basis = v;
+  simModel = buildSimModel(simState.year, null, v);
+  simRenderAssume(); simModel.dates.forEach((d, i) => simPaintRow(i)); simRecompute();
+}
+
+// ---------- Prognose-Check ----------
+function simRenderCheck() {
+  const el = document.getElementById('simCheck'); if (!el) return;
+  const bt = simBacktest(simModel.year, simModel.lastKnown);
+  if (!bt) { el.innerHTML = `<h3>🔍 Prognose-Check</h3><p class="sim-text sim-muted">Für einen Vergleich mit dem Vorjahr fehlen noch Daten.</p>`; return; }
+  const B = bt.res.byName, order = simOrder(bt.res);
+  let hits = 0;
+  const rows = order.map(n => {
+    const act = bt.actual[n] || 0, ok = act >= B[n].p10 && act <= B[n].p90;
+    if (ok) hits++;
+    return `<tr><td><div class="sim-nm">${simName(n)}</div></td><td class="sim-r">${simNum(B[n].mean)}<div class="sim-sub">${simNum(B[n].p10)}–${simNum(B[n].p90)}</div></td><td class="sim-r"><b>${simNum(act)}</b></td><td class="sim-r">${ok ? '✅' : '➖'}</td><td class="sim-r">${simPctSure(B[n].win)}</td></tr>`;
+  }).join('');
+  const winner = bt.actualOrder[0], fav = [...bt.res.members].sort((a, b) => B[b].win - B[a].win)[0];
+  el.innerHTML = `<h3>🔍 Prognose-Check: Wie gut rechnet die Simulation?</h3>
+    <p class="sim-text">Am <b>${simFmt(bt.cutoff, true)}</b> – also zum gleichen Zeitpunkt vor einem Jahr (${bt.model.verstrichen} von ${bt.model.maxP} Terminen verstrichen) – hätte die Simulation ohne Eingaben gesagt:</p>
+    <table class="sim-table"><thead><tr><th>Mitglied</th><th class="sim-r">Prognose</th><th class="sim-r">Echt</th><th class="sim-r">Spanne</th><th class="sim-r">Sieg</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="sim-text" style="margin-top:0.5rem">Tatsächlicher Jahressieger ${bt.py}: <b>${escapeHtml(winner)}</b> – laut Simulation ${simPctSure(B[winner] ? B[winner].win : 0)} Siegchance${fav === winner ? ' (war der Favorit ✅)' : ` (Favorit war ${escapeHtml(fav)})`}. ${hits} von ${order.length} Endständen lagen in der vorhergesagten Spanne.</p>`;
+}
+
 // ============================================================
 // NAVIGATION
 // ============================================================
@@ -3189,6 +3925,7 @@ function showPage(id) {
   if (id==='dashboard') renderDashboard();
   if (id==='treffen') renderTreffen();
   if (id==='overall') renderOverall();
+  if (id==='simulation') renderSimulation();
   if (id==='statuten') renderStatuten();
   if (id==='admin') renderAdmin();
 }
@@ -4162,11 +4899,12 @@ function closeEditForm() {
 }
 
 // INIT
+renderAnnouncements();
 loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v9.6 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v9.7 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
