@@ -243,6 +243,9 @@
   .statut-num { color: var(--gold); font-weight: 700; min-width: 24px; }
   .statut-text { white-space: pre-line; flex: 1; min-width: 0; }
   .tie-note { font-size: 0.72rem; color: var(--muted); line-height: 1.4; margin-top: 0.45rem; }
+  .quote-info { background: rgba(42,95,168,0.07); border: 1px solid rgba(42,95,168,0.22); border-left: 3px solid var(--gold); border-radius: var(--radius); padding: 0.6rem 0.85rem; margin: 0 0 0.75rem; font-size: 0.8rem; line-height: 1.45; color: var(--text); }
+  .quote-info b { color: var(--gold); }
+  .quote-info .qi-sub { color: var(--muted); font-size: 0.74rem; margin-top: 0.25rem; }
   /* Treffen-Tabelle: auf dem Handy steht die Begründung unter dem Status statt in einer eigenen Spalte */
   .tr-reason-inline, .tr-reason-inline-th { display: none; }
   .tr-reason-inline { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: normal; line-height: 1.3; }
@@ -526,6 +529,7 @@
   <div class="year-tabs" id="dashYearTabs" style="margin-top:1.5rem"></div>
   <div class="stats-grid" id="statsGrid"></div>
   <h2 class="section-title">🏆 Rangliste</h2>
+  <div id="rankingInfo"></div>
   <table class="ranking-table" id="rankingTable"></table>
   <div id="dashMemberChart"></div>
   <div id="extraStats"></div>
@@ -1833,6 +1837,9 @@ function renderDashboard() {
   ranked.sort((a,b) => rankOrder.indexOf(a.name) - rankOrder.indexOf(b.name));
   const maxPts = ranked[0]?.pts || 1; // first place = 100% bar width
 
+  const rInfo = document.getElementById('rankingInfo');
+  if (rInfo) rInfo.innerHTML = quoteInfoHtml(currentDashYear, {stattgefunden, ausgefallen, maxP, personalMaxP, members});
+
   const table = document.getElementById('rankingTable');
   table.innerHTML = `<thead><tr>
     <th style="width:32px">#</th>
@@ -2104,6 +2111,49 @@ function tieNotesHtml(notes) {
 }
 function fmtPts(v) { return (Math.round(v * 10) / 10).toString().replace('.', ','); }
 
+// Erklär-Banner über der Rangliste: Die Quote rechnet gegen die VERSTRICHENEN Stammtische
+// (stattgefunden + ausgefallen), nicht nur gegen die stattgefundenen.
+function quoteInfoHtml(year, ys) {
+  const verstrichen = ys.stattgefunden + ys.ausgefallen;
+  const lateJoiners = ys.members.filter(m => (ys.personalMaxP[m]||0) > 0 && ys.personalMaxP[m] < verstrichen);
+  const exPts = Math.round(verstrichen / 2);
+  const example = verstrichen > 0
+    ? ` Beispiel: ${exPts} Teilnahmen ÷ ${verstrichen} = ${(exPts/verstrichen*100).toFixed(2).replace('.',',')} %.`
+    : '';
+  const sg = ys.stattgefunden > 0 ? ` (${ys.stattgefunden})` : '';
+  const notAgainst = ys.maxP > verstrichen
+    ? `Gerechnet wird weder nur gegen die stattgefundenen${sg} noch gegen alle möglichen Termine des Jahres (${ys.maxP}).`
+    : `Gerechnet wird nicht nur gegen die stattgefundenen${sg}.`;
+  return `<div class="quote-info">ℹ️ <b>So wird die Quote berechnet:</b> Teilnahmen ÷ <b>verstrichene</b> Stammtische.
+    Verstrichen = stattgefunden + ausgefallen${verstrichen>0 ? ` (${year}: ${ys.stattgefunden} + ${ys.ausgefallen} = <b>${verstrichen}</b>)` : ''}.${example}
+    <div class="qi-sub">Ausgefallene Termine zählen also mit – wer da nicht kam, hat dort 0. ${notAgainst}${lateJoiners.length ? ` Für ${lateJoiners.join(', ')} zählen nur die Termine ab Beitritt.` : ''}</div></div>`;
+}
+
+// Laufende Serie: wie viele Stammtische in Folge war jemand bis einschließlich des letzten
+// erfassten Termins dabei? Gleiche Definition wie "Längste Serie" (ausgefallene Termine unterbrechen).
+function computeCurrentStreaks(treffen, members) {
+  const asc = [...treffen].sort((a,b) => new Date(a.date) - new Date(b.date));
+  const lastTreffen = asc[asc.length-1] || null;
+  const res = {};
+  members.forEach(m => {
+    let cur = 0, since = null, lastPresent = null;
+    asc.forEach(t => {
+      if ((t.attendance[m] ?? 0) > 0) { if (cur === 0) since = t.date; cur++; lastPresent = t.date; }
+      else { cur = 0; since = null; }
+    });
+    res[m] = { cur, since, lastPresent };
+  });
+  const order = [...members].sort((a,b) =>
+    (res[b].cur - res[a].cur) ||
+    (new Date(res[b].lastPresent||0) - new Date(res[a].lastPresent||0)) ||
+    members.indexOf(a) - members.indexOf(b));
+  // gleiche laufende Serie = identische Serie (gleicher Start, gleiches Ende) → gleicher Platz
+  const place = {};
+  order.forEach((m,i) => { place[m] = (i>0 && res[m].cur>0 && res[m].cur===res[order[i-1]].cur) ? place[order[i-1]] : i+1; });
+  return { res, order, place, lastDate: lastTreffen ? lastTreffen.date : null,
+           lastCancelled: lastTreffen ? Object.values(lastTreffen.attendance||{}).every(v => !v) : false };
+}
+
 function computeStreaks(treffen, members) {
   const ascTreffen = [...treffen].sort((a,b) => new Date(a.date) - new Date(b.date));
   const streaks = {};
@@ -2124,6 +2174,39 @@ function computeStreaks(treffen, members) {
     streakRanges[m] = (bestStart && bestEnd) ? {start: bestStart, end: bestEnd} : null;
   });
   return { streaks, streakRanges };
+}
+
+function currentStreakCardHtml(treffen, members, streaks) {
+  const { res, order, place, lastDate, lastCancelled } = computeCurrentStreaks(treffen, members);
+  const fmt = d => new Date(d).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+  if (!lastDate) return `<div class="extra-card"><div class="ec-title">⏱️ Laufende Serie</div><div class="ec-sub">Keine Daten</div></div>`;
+  const isCurrentYear = new Date(lastDate).getFullYear() === new Date().getFullYear();
+  const yearBest = Math.max(0, ...members.map(m => streaks[m]||0));
+  const leader = order[0];
+  const leaders = order.filter(m => res[m].cur > 0 && res[m].cur === res[leader].cur);
+  let headline, sub;
+  if (res[leader].cur > 0) {
+    headline = leaders.map(m=>`<span style="display:inline-flex;align-items:center;gap:0.3rem">🔥 ${getAvatar(m,'sm')}${m}</span>`).join('');
+    const c = res[leader].cur;
+    const gap = yearBest - c;
+    sub = `${c} Stammtisch${c===1?'':'e'} in Folge · seit ${fmt(res[leader].since)}` +
+      (gap > 0 ? ` · noch ${gap} bis zur Jahres-Bestmarke (${yearBest})` : ` · ${leaders.length>1?'laufen':'läuft'} gerade die längste Serie des Jahres`);
+  } else {
+    headline = '<span style="color:var(--muted)">Niemand</span>';
+    sub = lastCancelled ? `Der letzte Termin (${fmt(lastDate)}) ist ausgefallen – damit sind alle Serien unterbrochen.` : 'Beim letzten Termin war niemand da.';
+  }
+  const rows = order.map(m => {
+    const r = res[m];
+    const detail = r.cur > 0 ? `seit ${fmt(r.since)}` : (r.lastPresent ? `zuletzt dabei am ${fmt(r.lastPresent)}` : 'noch nicht dabei');
+    return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid var(--border)"><span style="font-size:0.75rem;color:var(--muted);min-width:16px">${r.cur>0?place[m]+'.':'–'}</span>${getAvatar(m,'sm')}<div style="flex:1;min-width:0"><div style="font-size:0.85rem">${m}</div><div style="font-size:0.7rem;color:var(--muted)">${detail}</div></div><span style="color:${r.cur>0?'var(--gold2)':'var(--muted)'};font-weight:500;flex-shrink:0">${r.cur}×</span></div>`;
+  }).join('');
+  return `<div class="extra-card">
+        <div class="ec-title">⏱️ Laufende Serie ${isCurrentYear ? '(aktuell)' : '(Stand Jahresende)'}</div>
+        <div class="ec-winner" style="display:flex;flex-wrap:wrap;align-items:center;gap:0.4rem">${headline}</div>
+        <div class="ec-sub">${sub}</div>
+        <div class="tie-note">Stand nach dem letzten erfassten Termin am ${fmt(lastDate)}. Ein ausgefallener Termin unterbricht die Serie – wie bei der längsten Serie.</div>
+        <div style="margin-top:0.75rem">${rows}</div>
+      </div>`;
 }
 
 function renderExtraStats(treffen, members, stattgefunden) {
@@ -2206,6 +2289,7 @@ function renderExtraStats(treffen, members, stattgefunden) {
         ${tieNotesHtml(streakTieNotes)}
         <div style="margin-top:0.75rem">${sortedByStreak.map((m,i)=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid var(--border)"><span style="font-size:0.75rem;color:var(--muted);min-width:16px">${i+1}.</span>${getAvatar(m,'sm')}<div style="flex:1;min-width:0"><div style="font-size:0.85rem">${m}</div>${formatStreakRange(m) ? `<div style="font-size:0.7rem;color:var(--muted)">${formatStreakRange(m)}</div>` : ''}</div><span style="color:var(--gold2);font-weight:500;flex-shrink:0">${streaks[m]}×</span></div>`).join('')}</div>
       </div>
+      ${currentStreakCardHtml(treffen, members, streaks)}
       <div class="extra-card">
         <div class="ec-title">📍 Meistbesuchte Location</div>
         ${topLoc ? `<div class="ec-winner" style="display:flex;flex-wrap:wrap;align-items:center;gap:0.4rem">${topLocs.map(([l])=>`<span style="display:inline-flex;align-items:center;gap:0.3rem">${getLocationAvatar(l,'sm')}${l}</span>`).join('')}</div><div class="ec-sub">${topLoc[1]}× besucht${topLocs.length>1?' · Gleichstand':''}</div>
@@ -3560,6 +3644,17 @@ function printDashboard() {
     + tieNotes(streakOrderPrint, m => streaks[m], streakRunsPrint, m => 'beide '+streaks[m]+'er-Serie', 1)
         .map(n => '<tr><td colspan="3" class="tie-note">⚖️ '+escapeHtml(n)+'</td></tr>').join('');
 
+  // Laufende Serie — gleiche Funktion wie Dashboard
+  const csPrint = computeCurrentStreaks(ys.treffen, members);
+  const fmtShort = d => new Date(d).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+  const curStreakRows = csPrint.order.map(m => {
+    const r = csPrint.res[m];
+    const detail = r.cur > 0 ? 'seit '+fmtShort(r.since) : (r.lastPresent ? 'zul. '+fmtShort(r.lastPresent) : '–');
+    return '<tr><td>'+(r.cur>0?csPrint.place[m]+'.':'–')+'</td><td>'+av(m,'person')+m+' <span style="font-size:9px;color:#6a7a96">'+detail+'</span></td><td>'+r.cur+'×</td></tr>';
+  }).join('') + (csPrint.lastDate ? '<tr><td colspan="3" class="tie-note">Stand '+new Date(csPrint.lastDate).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+(csPrint.lastCancelled?' (ausgefallen → alle Serien unterbrochen)':'')+'</td></tr>' : '');
+  const verstrichenRank = ys.stattgefunden + ys.ausgefallen;
+  const quoteNotePrint = '<div class="tie-note">ℹ️ Quote = Teilnahmen ÷ verstrichene Stammtische (stattgef. + ausgef. = '+ys.stattgefunden+' + '+ys.ausgefallen+' = '+verstrichenRank+'), nicht nur die stattgefundenen.</div>';
+
   // Entschuldigungskategorien: mit Begründung / ohne Begründung / unentschuldigt (gleiche Funktion wie Dashboard)
   const hist = historicalData[year];
   const { noEx, noReason, withReason } = computeExcuseCategories(year);
@@ -3743,10 +3838,11 @@ td{padding:4px 6px;border-bottom:.5px solid #eef2f8}
     '<div class="card" style="margin-bottom:8px"><div class="lbl">📅 Daten mit allen Mitgliedern anwesend</div><div style="font-size:9.5px;margin-top:2px">'+allPresentDatesStr+'</div></div>' +
     '<div style="margin-bottom:8px"><h2>📈 Jahresverlauf — Teilnehmer pro Treffen</h2>'+chartSvg+'</div>' +
     '<div class="grid4" style="grid-template-columns:1.3fr 1fr 1fr 1fr">' +
-    '<div><h2>Rangliste</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Teiln.</th><th>Quote</th></tr></thead><tbody>'+rankRows+'</tbody></table></div>' +
+    '<div><h2>Rangliste</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Teiln.</th><th>Quote</th></tr></thead><tbody>'+rankRows+'</tbody></table>'+quoteNotePrint+'</div>' +
     '<div><h2>Locations</h2><table><thead><tr><th>#</th><th>Ort</th><th>Besuche</th></tr></thead><tbody>'+locRows+'</tbody></table>' +
     '<h2>Häufigste Gäste</h2><table><thead><tr><th>#</th><th>Gast</th><th>Besuche</th></tr></thead><tbody>'+guestRows+'</tbody></table></div>' +
-    '<div><h2>Längste Serie</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Serie</th></tr></thead><tbody>'+streakRows+'</tbody></table></div>' +
+    '<div><h2>Längste Serie</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Serie</th></tr></thead><tbody>'+streakRows+'</tbody></table>' +
+    '<h2>Laufende Serie</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Serie</th></tr></thead><tbody>'+curStreakRows+'</tbody></table></div>' +
     '<div><h2>Entsch. m. Begr.</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Anz.</th></tr></thead><tbody>'+withReasonRows+'</tbody></table>' +
     '<h2>Entsch. o. Begr.</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Anz.</th></tr></thead><tbody>'+noReasonRows+'</tbody></table>' +
     '<h2>Unentschuldigt</h2><table><thead><tr><th>#</th><th>Mitglied</th><th>Anz.</th></tr></thead><tbody>'+unexRows+'</tbody></table></div>' +
@@ -4070,7 +4166,7 @@ loadFromSupabase();
 restoreAdminSession();
 </script>
 <div style="text-align:center;padding:1.5rem 1rem 5rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem">
-  © 2026 Jan Hageney &nbsp;·&nbsp; v9.5 &nbsp;·&nbsp;
+  © 2026 Jan Hageney &nbsp;·&nbsp; v9.6 &nbsp;·&nbsp;
   <a href="#" onclick="showPage('impressum');return false;" style="color:var(--gold);text-decoration:none">Impressum</a> &nbsp;·&nbsp;
   <a href="#" onclick="showPage('datenschutz');return false;" style="color:var(--gold);text-decoration:none">Datenschutz</a> &nbsp;·&nbsp;
   <a href="#" id="footerAdminLink" onclick="openLogin();return false;" style="color:var(--gold);text-decoration:none">Admin</a>
